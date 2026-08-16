@@ -90,7 +90,7 @@ const char *instruction_name(Instruction instruction) {
     }
 }
 
-void print_tokens(const LexerState *state) {
+void print_tokens(const LexerState *state, FILE *stream) {
     for (size_t i = 0; i < state->tokens.size; i++) {
         Token *token = vector_at(
             (Vector *)&state->tokens,
@@ -99,7 +99,8 @@ void print_tokens(const LexerState *state) {
 
         size_t length = token->lexeme_end - token->lexeme_start;
 
-        printf(
+        fprintf(
+            stream,
             "TOKEN: %-12s | Lexeme = %.*s",
             token_type_name(token->type),
             (int)length,
@@ -108,19 +109,20 @@ void print_tokens(const LexerState *state) {
 
         if (token->type == TOKEN_DEC_NUMBER ||
             token->type == TOKEN_HEX_NUMBER) {
-            printf(" | Number = %d", token->number);
+            fprintf(stream, " | Number = %d", token->number);
         }
 
-        putchar('\n');
+        fputc('\n', stream);
     }
 }
 
-void print_symbols(const SymbolTable *table) {
+void print_symbols(const SymbolTable *table, FILE *stream) {
     for (size_t i = 0; i < table->symbols.size; i++) {
         const SymbolLocation *symbol = vector_at_const(&table->symbols, i);
         size_t length = symbol->identifier.lexeme_end - symbol->identifier.lexeme_start;
 
-        printf(
+        fprintf(
+            stream,
             "SYMBOL: %-8.*s | Location = 0x%03X\n",
             (int)length,
             table->src + symbol->identifier.lexeme_start,
@@ -129,54 +131,55 @@ void print_symbols(const SymbolTable *table) {
     }
 }
 
-void print_token_lexeme(const char *src, const Token *token) {
+void print_token_lexeme(const char *src, const Token *token, FILE *stream) {
     if (token == NULL) {
-        printf("<null>");
+        fprintf(stream, "<null>");
         return;
     }
 
     size_t length = token->lexeme_end - token->lexeme_start;
 
-    printf(
+    fprintf(
+        stream,
         "%.*s",
         (int)length,
         src + token->lexeme_start
     );
 }
 
-void print_ast(const ParserState *state) {
+void print_ast(const ParserState *state, FILE *stream) {
     for (size_t i = 0; i < state->statements.size; i++) {
         const Statement *stmt = vector_at_const(&state->statements, i);
 
-        printf("STATEMENT: %-8s | Location = ", instruction_name(stmt->instruction));
+        fprintf(stream, "STATEMENT: %-8s | Location = ", instruction_name(stmt->instruction));
 
         if (stmt->location == INVALID_ADDRESS) {
-            printf("INVALID");
+            fprintf(stream, "INVALID");
         } else {
-            printf("0x%03X", stmt->location);
+            fprintf(stream, "0x%03X", stmt->location);
         }
 
         if (stmt->instruction >= INST_MEM_AND &&
             stmt->instruction <= INST_MEM_ISZ) {
-            printf(" | Operand = ");
+            fprintf(stream, " | Operand = ");
 
             if (stmt->operand_pending) {
-                print_token_lexeme(state->src, stmt->symbolic_address);
-                printf(" (pending)");
+                print_token_lexeme(state->src, stmt->symbolic_address, stream);
+                fprintf(stream, " (pending)");
             } else {
-                printf("0x%03X", stmt->operand);
+                fprintf(stream, "0x%03X", stmt->operand);
             }
 
             if (stmt->indirect) {
-                printf(" | Indirect");
+                fprintf(stream, " | Indirect");
             }
         } else if (stmt->instruction == INST_PSI_DEC) {
-            printf(" | Operand = %d", (int16_t)stmt->operand);
+            fprintf(stream, " | Operand = %d", (int16_t)stmt->operand);
         } else if (stmt->instruction == INST_PSI_HEX ||
                    stmt->instruction == INST_PSI_ORG) {
-            printf(" | Operand = 0x%03X", stmt->operand);
+            fprintf(stream, " | Operand = 0x%03X", stmt->operand);
         }
 
-        putchar('\n');
+        fputc('\n', stream);
     }
 }
