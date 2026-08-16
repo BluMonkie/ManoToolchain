@@ -16,7 +16,7 @@ The Mano Basic Computer is a 16-bit, accumulator-based architecture designed as 
 
 Its simplicity makes it an ideal target for understanding the fundamentals of computer organisation: fetch-decode-execute cycles, two-pass assembly, and register-transfer-level semantics.
 
-See [docs/Instructions.md](docs/Instructions.md) and [docs/Registers.md](docs/Registers.md) for the full architecture reference.
+See [docs/Architecture.md](docs/Architecture.md) for the full architecture reference.
 
 ---
 
@@ -35,6 +35,7 @@ See [docs/Instructions.md](docs/Instructions.md) and [docs/Registers.md](docs/Re
 mano/
 ├── Makefile
 ├── docs/                   # Documentation
+│   ├── Architecture.md
 │   ├── Assembler.md
 │   ├── Assembly.md
 │   ├── Instructions.md
@@ -113,6 +114,7 @@ See [docs/Assembler.md](docs/Assembler.md) for the full CLI reference and more e
 
 | Document | Description |
 |----------|-------------|
+| [docs/Architecture.md](docs/Architecture.md) | Memory, bus, fetch-decode-execute cycle, I/O, and interrupts |
 | [docs/Registers.md](docs/Registers.md) | CPU registers, I/O flags, and register-transfer notation |
 | [docs/Instructions.md](docs/Instructions.md) | Full instruction set with opcodes and semantics |
 | [docs/Assembly.md](docs/Assembly.md) | Assembly language syntax and formal grammar |
