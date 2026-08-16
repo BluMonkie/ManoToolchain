@@ -18,15 +18,15 @@ EMULATOR_OBJ := $(EMULATOR_SRC:src/%.c=build/%.o)
 
 all: assembler emulator
 
-assembler: bin/assembler
+assembler: bin/manoasm
 
-emulator: bin/emulator
+emulator: bin/manoemu
 
-bin/assembler: $(COMMON_OBJ) $(ASSEMBLER_OBJ)
+bin/manoasm: $(COMMON_OBJ) $(ASSEMBLER_OBJ)
 	@mkdir -p $(@D)
 	$(CC) $^ -o $@
 
-bin/emulator: $(COMMON_OBJ) $(EMULATOR_OBJ)
+bin/manoemu: $(COMMON_OBJ) $(EMULATOR_OBJ)
 	@mkdir -p $(@D)
 	$(CC) $^ -o $@
 

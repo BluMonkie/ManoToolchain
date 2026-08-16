@@ -1,32 +1,63 @@
 # Registers
 
-Registers are described using alphanumeric identifiers.
-Example: `AC, PC, MAR, etc.`
+The Mano Basic Computer has 9 registers grouped by their role.
 
-## Registers in Mano Basic Computer
-| Register symbol | Number of bits | Register name        | Function                     |
-| --------------- | -------------: | -------------------- | ---------------------------- |
-| `DR`            |             16 | Data register        | Holds memory operand         |
-| `AR`            |             12 | Address register     | Holds address for memory     |
-| `AC`            |             16 | Accumulator          | Processor register           |
-| `IR`            |             16 | Instruction register | Holds instruction code       |
-| `PC`            |             12 | Program counter      | Holds address of instruction |
-| `TR`            |             16 | Temporary register   | Holds temporary data         |
-| `INPR`          |              8 | Input register       | Holds input character        |
-| `OUTR`          |              8 | Output register      | Holds output character       |
+---
 
+## Register Summary
 
-## Register transfer language
-|Symbol|Meaning|
-|------|-------|
-|Alphanumeric Identifier|Name of a register|
-|Paranthesis|Part of a register|
-|Arrow|Transfer operation (dest <- source)|
-|Arithmetic/Logical symbol|Arithmetic/Logical operation|
-|Comma|Separates microinstructions|
-|Colon|Executes if control signal = 1|
+| Symbol | Bits | Name | Role |
+|--------|-----:|------|------|
+| `AC` | 16 | Accumulator | Primary arithmetic/logic register; operand for most instructions |
+| `E` | 1 | Extended Accumulator | Carry/overflow bit; rotated with `AC` by `CIR`/`CIL` |
+| `DR` | 16 | Data Register | Temporarily holds a word read from memory |
+| `AR` | 12 | Address Register | Supplies the address to the memory unit |
+| `IR` | 16 | Instruction Register | Holds the currently executing instruction word |
+| `PC` | 12 | Program Counter | Address of the next instruction to fetch |
+| `TR` | 16 | Temporary Register | Scratch register used during interrupt handling |
+| `INPR` | 8 | Input Register | Holds the last character received from input |
+| `OUTR` | 8 | Output Register | Holds the character to be sent to output |
 
+---
 
-Apart from this, transfers may also involve the common bus:
-Example: `BUS <- R1 , R1 <- R1`
-But this notation is rarely used. If the bus is known to exist in the system, the transfer can be written directly between the registers.
+## I/O Flags
+
+Two 1-bit flags synchronise the CPU with I/O devices:
+
+| Flag | Name | Set when |
+|------|------|----------|
+| `FGI` | Input Flag | Input device has a new character ready in `INPR` |
+| `FGO` | Output Flag | Output device is ready to accept a new character from `OUTR` |
+
+The `SKI` and `SKO` instructions test these flags. The `ION`/`IOF` instructions control the interrupt enable flag (`IEN`).
+
+---
+
+## Register Transfer Notation
+
+Register transfer language (RTL) is used throughout the documentation to describe what each instruction does.
+
+| Symbol | Meaning |
+|--------|---------|
+| `R` | Register name (e.g. `AC`, `DR`) |
+| `R[i]` | Bit `i` of register `R` |
+| `R[i:j]` | Bits `i` down to `j` of register `R` |
+| `M[X]` | Contents of memory at address `X` |
+| `R ← expr` | Transfer (assign) `expr` into register `R` |
+| `~R` | Bitwise complement of `R` |
+| `∧` | Bitwise AND |
+| `;` | Sequential micro-operations (executed left to right) |
+
+**Example:**
+
+```
+BSA X:  M[X] ← PC,  PC ← X + 1
+```
+
+Saves the return address in `M[X]`, then jumps to the instruction after `X`.
+
+---
+
+## Related
+
+- [Instructions.md](Instructions.md) — Full instruction set with opcodes
