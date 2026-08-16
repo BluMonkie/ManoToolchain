@@ -1,0 +1,32 @@
+# Build artifacts
+/build/
+/bin/
+
+# Object files
+*.o
+
+# Executables
+*.exe
+*.out
+
+# Generated binaries
+*.bin
+*.mano
+
+# Debug / profiling output
+*.gcda
+*.gcno
+*.gcov
+
+# IDE / editor
+.vscode/
+.idea/
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*~
