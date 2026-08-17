@@ -123,5 +123,5 @@ int main(int argc, char** argv) {
         options.output_file_path = replace_or_add_extension(options.input_file_path, MANO_ASM_FILE_EXTENSION, MANO_BIN_FILE_EXTENSION);
     }
 
-    write_buffer_be(encoder.memory, options.output_file_path);
+    write_buffer16_be(encoder.memory, MANO_MEMORY_SIZE, options.output_file_path);
 }

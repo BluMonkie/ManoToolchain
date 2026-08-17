@@ -140,7 +140,7 @@ bool read_buffer16_be(const char *file_path, uint16_t **out, size_t *length) {
     size_t new_len = (len + 1) / 2;
     uint16_t *buf16 = xmalloc(sizeof(uint16_t) * new_len);
 
-    for (int i = 0; i < new_len; i++) {
+    for (size_t i = 0; i < new_len; i++) {
         uint16_t hi = buffer[2 * i];
         uint16_t lo = (2 * i + 1 < len) ? buffer[2 * i + 1] : 0;
 

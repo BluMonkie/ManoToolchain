@@ -52,12 +52,8 @@ typedef struct {
 
 typedef struct {
     Address PC;
-    Address AR;
 
-    Word DR;
-    Word IR;
     Word AC;
-    Word TR;
     
     IO INPR;
     IO OUTR;
@@ -72,5 +68,6 @@ typedef struct {
 typedef struct {
     CPU cpu;
     Memory mem;
+    bool halted;
 } System;
 

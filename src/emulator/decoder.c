@@ -1,30 +1,15 @@
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "decoder.h"
 
 #define MR_OPCODE_MASK   0x7000
 #define INDIRECT_MASK 0x8000
 #define MR_ADDRESS_MASK  0x0FFF
 
-Instruction decode_instruction(Word word);
-Instruction decode_mr_instruction(Word word);
-Instruction decode_rr_instruction(Word word);
-Instruction decode_io_instruction(Word word);
-
-DecoderState decoder_new(const Word *buffer, size_t buffer_len) {
-    Vector vec = vector_new(sizeof(Instruction));
-
-    return (DecoderState) {
-        .buffer = buffer,
-        .buffer_len = buffer_len,
-        .instructions = vec
-    };
-} 
-
-void decode_instructions(DecoderState *state) {
-    for (size_t i = 0; i < state->buffer_len; i++) {
-        Instruction inst = decode_instruction(state->buffer[i]);
-        vector_push(&state->instructions, &inst);
-    }
-}
+static Instruction decode_mr_instruction(Word word);
+static Instruction decode_rr_instruction(Word word);
+static Instruction decode_io_instruction(Word word);
 
 Instruction decode_instruction(Word word) {
     uint16_t opcode = word >> 12;
