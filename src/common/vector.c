@@ -2,12 +2,14 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-#include <common/vector.h>
+
+#include "common/vector.h"
+#include "common/xmalloc.h"
 
 #define VECTOR_GROWTH_FACTOR 2
 
 Vector vector_new_with_capacity(size_t element_size, size_t capacity) {
-    void *buf = malloc(element_size * capacity);
+    void *buf = xmalloc(element_size * capacity);
     if (buf == NULL) {
         printf("ERROR: Out Of Memory!");
         exit(EXIT_FAILURE);
@@ -28,11 +30,7 @@ Vector vector_new(size_t element_size) {
 void vector_push(Vector *vec, const void *element) {
     if (vec->size == vec->capacity) {
         size_t capacity_new = vec->capacity == 0 ? 1 : vec->capacity * VECTOR_GROWTH_FACTOR;
-        void *buf_new = realloc(vec->buffer, capacity_new * vec->element_size);
-        if (buf_new == NULL) {
-            fprintf(stderr, "ERROR: Out Of Memory!\n");
-            exit(EXIT_FAILURE);
-        }
+        void *buf_new = xrealloc(vec->buffer, capacity_new * vec->element_size);
 
         vec->capacity = capacity_new;
         vec->buffer = buf_new;

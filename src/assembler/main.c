@@ -15,19 +15,6 @@
 #define MANO_SYMBOLS_FILE_EXTENSION "_symbols.txt"
 #define MANO_AST_FILE_EXTENSION "_ast.txt"
 
-void write_buffer_be(uint16_t *buf, char *output_file_name) {
-    uint8_t buffer[MANO_MEMORY_SIZE * 2];
-
-    for (size_t i = 0; i < MANO_MEMORY_SIZE; i++) {
-        uint16_t word = buf[i];
-
-        buffer[i * 2]     = (uint8_t)(word >> 8);
-        buffer[i * 2 + 1] = (uint8_t)word;
-    }
-
-    write_file_buffer(output_file_name, buffer, sizeof(buffer));
-}
-
 void print_help() {
     printf("ManoASM - A mano basic assembly assembler\n");
     printf("Usage: manoasm [options] input_file.masm\n");
