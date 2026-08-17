@@ -2,11 +2,53 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define MEMORY_WORDS 4096
+#define MANO_MEMORY_SIZE 4096
+#define INVALID_ADDRESS 0xFFFF
 
 typedef uint16_t Word;
 typedef uint16_t Address;
 typedef uint8_t IO;
+
+typedef enum {
+    // Memory reference
+    INST_AND,
+    INST_ADD,
+    INST_LDA,
+    INST_STA,
+    INST_BUN,
+    INST_BSA,
+    INST_ISZ,
+
+    // Register reference
+    INST_CLA,
+    INST_CLE,
+    INST_CMA,
+    INST_CME,
+    INST_CIR,
+    INST_CIL,
+    INST_INC,
+    INST_SPA,
+    INST_SNA,
+    INST_SZA,
+    INST_SZE,
+    INST_HLT,
+
+    // I/O
+    INST_INP,
+    INST_OUT,
+    INST_SKI,
+    INST_SKO,
+    INST_ION,
+    INST_IOF,
+
+    INST_INVALID
+} InstOpcode;
+
+typedef struct {
+    InstOpcode opcode;
+    Address operand;
+    bool is_indirect;
+} Instruction;
 
 typedef struct {
     Address PC;
@@ -24,10 +66,11 @@ typedef struct {
 } CPU;
 
 typedef struct {
-    Word data[MEMORY_WORDS];
+    Word data[MANO_MEMORY_SIZE];
 } Memory;
 
 typedef struct {
     CPU cpu;
     Memory mem;
 } System;
+
