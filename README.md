@@ -127,6 +127,20 @@ See [docs/Assembler.md](docs/Assembler.md) for the full CLI reference and more e
 
 ---
 
+## AI Usage
+
+AI tools were used during the development of this project as a supporting tool for:
+
+- Brainstorming and discussing design decisions
+- Asking technical questions
+- Reviewing and reasoning about code
+- Identifying potential bugs and implementation issues
+- Refining and structuring documentation
+
+The implementation and architecture of the project were primarily developed and written manually. AI-generated code was used minimally, and any such code was reviewed and integrated manually.
+
+Some documentation may have been refined with AI assistance for clarity, structure, and presentation.
+
 ## Version
 
 `v1.0.0`
