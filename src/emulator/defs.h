@@ -4,6 +4,7 @@
 
 #define MANO_MEMORY_SIZE 4096
 #define INVALID_ADDRESS 0xFFFF
+#define MANO_ADDRESS_MASK 0xFFF 
 
 typedef uint16_t Word;
 typedef uint16_t Address;
@@ -71,3 +72,14 @@ typedef struct {
     bool halted;
 } System;
 
+static inline Address address_add(Address a, Address b) {
+    return (a + b) & MANO_ADDRESS_MASK;
+}
+
+static inline Address address_inc(Address a) {
+    return address_add(a, 1);
+}
+
+static inline Address address_from_word(Word word) {
+    return word & MANO_ADDRESS_MASK;
+}

@@ -18,13 +18,13 @@ void execute_instructions(System *sys) {
             fprintf(stderr, "Error: Invalid instruction %x at %x.\n", inst_word, sys->cpu.PC);
             exit(EXIT_FAILURE);
         }
-        sys->cpu.PC++;
+        sys->cpu.PC = address_inc(sys->cpu.PC);
 
         execute_instruction(sys, inst);
     }
 }
 
-void execute_instruction(System *sys, Instruction inst) {
+static void execute_instruction(System *sys, Instruction inst) {
     InstOpcode opcode = inst.opcode;
     if (opcode <= INST_ISZ) {
         execute_mr_instruction(sys, inst);
@@ -38,10 +38,10 @@ void execute_instruction(System *sys, Instruction inst) {
     }
 }
 
-void execute_mr_instruction(System *sys, Instruction inst) {
+static void execute_mr_instruction(System *sys, Instruction inst) {
     Address effective_address = inst.operand;
     if (inst.is_indirect) {
-        effective_address = sys->mem.data[effective_address] & 0x0FFF;
+        effective_address = address_from_word(sys->mem.data[effective_address]);
     }
 
     switch (inst.opcode) {
@@ -68,13 +68,13 @@ void execute_mr_instruction(System *sys, Instruction inst) {
             break;
         case INST_BSA:
             sys->mem.data[effective_address] = sys->cpu.PC;
-            sys->cpu.PC = effective_address + 1;
+            sys->cpu.PC = address_inc(effective_address);
             break;
         case INST_ISZ:
             sys->mem.data[effective_address]++;
 
             if (sys->mem.data[effective_address] == 0) {
-                sys->cpu.PC++;
+                sys->cpu.PC = address_inc(sys->cpu.PC);
             }
             break;
         default:
@@ -82,7 +82,7 @@ void execute_mr_instruction(System *sys, Instruction inst) {
     }
 }
 
-void execute_rr_instruction(System *sys, Instruction inst) {
+static void execute_rr_instruction(System *sys, Instruction inst) {
     switch (inst.opcode) {
         case INST_CLA:
             sys->cpu.AC = 0;
@@ -96,35 +96,42 @@ void execute_rr_instruction(System *sys, Instruction inst) {
         case INST_CME:
             sys->cpu.E = !sys->cpu.E;
             break;
-        case INST_CIR:
+        case INST_CIR: {
+            bool old_e = sys->cpu.E;
+
             sys->cpu.E = sys->cpu.AC & 1u;
-            sys->cpu.AC = (sys->cpu.AC >> 1) | (sys->cpu.E << 15);
+            sys->cpu.AC = (sys->cpu.AC >> 1)
+                        | ((Word) old_e << 15);
             break;
-        case INST_CIL:
+        }
+        case INST_CIL: {
+            bool old_e = sys->cpu.E;
+
             sys->cpu.E = (sys->cpu.AC >> 15) & 1u;
-            sys->cpu.AC = (sys->cpu.AC << 1) | sys->cpu.E;
+            sys->cpu.AC = (sys->cpu.AC << 1) | old_e;
             break;
+        }
         case INST_INC:
             sys->cpu.AC++;
             break;
         case INST_SPA:
             if ((int16_t) sys->cpu.AC > 0) {
-                sys->cpu.PC++;
+                sys->cpu.PC = address_inc(sys->cpu.PC);
             } 
             break;
         case INST_SNA:
             if ((int16_t) sys->cpu.AC < 0) {
-                sys->cpu.PC++;
+                sys->cpu.PC = address_inc(sys->cpu.PC);
             } 
             break;
         case INST_SZA:
             if (sys->cpu.AC == 0) {
-                sys->cpu.PC++;
+                sys->cpu.PC = address_inc(sys->cpu.PC);
             } 
             break;
         case INST_SZE:
             if (!sys->cpu.E) {
-                sys->cpu.PC++;
+                sys->cpu.PC = address_inc(sys->cpu.PC);
             } 
             break;
         case INST_HLT:
@@ -136,7 +143,7 @@ void execute_rr_instruction(System *sys, Instruction inst) {
 }
 
 // TODO: Document and Implement async I/O behaviour
-void execute_io_instruction(System *sys, Instruction inst) {
+static void execute_io_instruction(System *sys, Instruction inst) {
     (void)sys;
     (void)inst;
 
