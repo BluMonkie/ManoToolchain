@@ -80,7 +80,7 @@ void parse_statements(ParserState *state) {
             }
             if (!is_at_end(state)) {
                 state->had_error = true;
-                fprintf(stderr, "ERROR while parsing: END instruction must be present at the end of the program");
+                fprintf(stderr, "ERROR while parsing: END instruction must be present at the end of the program.\n");
             }
             break;
         }
@@ -128,7 +128,7 @@ Statement parse_statement(ParserState *state) {
             return parse_label(state);
         } else {
             state->had_error = true;
-            fprintf(stderr, "ERROR while parsing: Expected instruction or label identifier, got %s.", token_type_name(token->type));
+            fprintf(stderr, "ERROR while parsing: Expected instruction or label identifier, got %s.\n", token_type_name(token->type));
             return INVALID_STATEMENT;
         }
     } else {
@@ -274,7 +274,7 @@ Token *consume(ParserState *state, TokenType type) {
         return previous(state);
     }
     state->had_error = true;
-    fprintf(stderr, "ERROR while parsing: Expected %s, got %s.", token_type_name(type), token_type_name(peek(state)->type));   
+    fprintf(stderr, "ERROR while parsing: Expected %s, got %s.\n", token_type_name(type), token_type_name(peek(state)->type));   
     return NULL;
 }
 

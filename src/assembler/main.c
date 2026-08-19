@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
         }
         FILE *tokens_file = fopen(tokens_file_path, "w");
         if (tokens_file == NULL) {
-            fprintf(stderr, "ERROR: Can't write to file %s.", tokens_file_path);
+            fprintf(stderr, "ERROR: Can't write to file %s.\n", tokens_file_path);
             exit(EXIT_FAILURE);
         }
         print_tokens(&lexer, tokens_file);
@@ -92,7 +92,7 @@ int main(int argc, char** argv) {
         }
         FILE *symbols_file = fopen(symbols_file_path, "w");
         if (symbols_file == NULL) {
-            fprintf(stderr, "ERROR: Can't write to file %s.", symbols_file_path);
+            fprintf(stderr, "ERROR: Can't write to file %s.\n", symbols_file_path);
             exit(EXIT_FAILURE);
         }
         print_symbols(&parser.symbols, symbols_file);
@@ -108,7 +108,7 @@ int main(int argc, char** argv) {
         }
         FILE *ast_file = fopen(ast_file_path, "w");
         if (ast_file == NULL) {
-            fprintf(stderr, "ERROR: Can't write to file %s.", ast_file_path);
+            fprintf(stderr, "ERROR: Can't write to file %s.\n", ast_file_path);
             exit(EXIT_FAILURE);
         }
         print_ast(&parser, ast_file);
