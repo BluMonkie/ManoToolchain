@@ -6,6 +6,9 @@
 #define INVALID_ADDRESS 0xFFFF
 #define MANO_ADDRESS_MASK 0xFFF 
 
+#define INTERRUPT_ADDRESS 0x0000
+#define ISR_ADDRESS 0x0001
+
 typedef uint16_t Word;
 typedef uint16_t Address;
 typedef uint8_t IO;
@@ -59,6 +62,9 @@ typedef struct {
     IO INPR;
     IO OUTR;
 
+    bool FGI;
+    bool FGO;
+    bool IEN;
     bool E;
 } CPU;
 

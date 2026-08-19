@@ -3,6 +3,7 @@
 
 #include "executor.h"
 #include "decoder.h"
+#include "common/io.h"
 
 static void execute_instruction(System *sys, Instruction inst);
 static void execute_mr_instruction(System *sys, Instruction inst);
@@ -10,7 +11,21 @@ static void execute_rr_instruction(System *sys, Instruction inst);
 static void execute_io_instruction(System *sys, Instruction inst);
 
 void execute_instructions(System *sys) {
+    sys->cpu.FGO = true;
     while (!sys->halted) {
+        if (!sys->cpu.FGO) {
+            put_output_char((char) sys->cpu.OUTR);
+            sys->cpu.FGO = true;
+        }
+        if (!sys->cpu.FGI && is_input_available()) {
+            sys->cpu.INPR = get_input_char();
+            sys->cpu.FGI = true;
+        }
+
+        if (sys->cpu.IEN && (sys->cpu.FGI || sys->cpu.FGO)) {
+            handle_interrupt(sys);
+        }
+
         Word inst_word = sys->mem.data[sys->cpu.PC];
         
         Instruction inst = decode_instruction(inst_word);
@@ -22,6 +37,12 @@ void execute_instructions(System *sys) {
 
         execute_instruction(sys, inst);
     }
+}
+
+static void handle_interrupt(System *sys) {
+    sys->mem.data[INTERRUPT_ADDRESS] = sys->cpu.PC;
+    sys->cpu.PC = ISR_ADDRESS;
+    sys->cpu.IEN = false;
 }
 
 static void execute_instruction(System *sys, Instruction inst) {
@@ -142,11 +163,34 @@ static void execute_rr_instruction(System *sys, Instruction inst) {
     }
 }
 
-// TODO: Document and Implement async I/O behaviour
+// TODO: Implement interrupts
 static void execute_io_instruction(System *sys, Instruction inst) {
-    (void)sys;
-    (void)inst;
-
-    fprintf(stderr, "ERROR: I/O instructions aren't implemented yet.\n");
-    exit(EXIT_FAILURE);
+    switch(inst.opcode) {
+        case INST_INP:
+            sys->cpu.AC = (sys->cpu.AC & 0xFF00u) | sys->cpu.INPR;
+            sys->cpu.FGI = false;
+            break;
+        case INST_OUT:
+            sys->cpu.OUTR = sys->cpu.AC;
+            sys->cpu.FGO = false;
+            break;
+        case INST_SKI:
+            if (sys->cpu.FGI) {
+                sys->cpu.PC = address_inc(sys->cpu.PC);
+            }
+            break;
+        case INST_SKO:
+            if (sys->cpu.FGO) {
+                sys->cpu.PC = address_inc(sys->cpu.PC);
+            }
+            break;
+        case INST_ION:
+            sys->cpu.IEN = true;
+            break;
+        case INST_IOF:
+            sys->cpu.IEN = false;
+            break;
+        default:
+            break;
+    }
 }
