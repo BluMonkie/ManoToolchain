@@ -6,6 +6,7 @@
 #include "common/io.h"
 
 static void execute_instruction(System *sys, Instruction inst);
+static void handle_interrupt(System *sys);
 static void execute_mr_instruction(System *sys, Instruction inst);
 static void execute_rr_instruction(System *sys, Instruction inst);
 static void execute_io_instruction(System *sys, Instruction inst);

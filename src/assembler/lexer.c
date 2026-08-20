@@ -1,7 +1,8 @@
-#include <lexer.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "lexer.h"
 
 typedef struct {
     const char *str;
