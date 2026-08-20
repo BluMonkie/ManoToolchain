@@ -25,7 +25,7 @@ See [docs/Architecture.md](docs/Architecture.md) for the full architecture refer
 | Sub-project | Binary | Status | Description |
 |-------------|--------|:------:|-------------|
 | **Assembler** | `bin/manoasm` | ✅ Complete | Translates `.masm` source into a binary memory image (`.mano`) |
-| **Emulator** | `bin/manoemu` | 🚧 In progress | Loads and executes `.mano` binaries |
+| **Emulator** | `bin/manoemu` | ✅ Complete | Loads and executes `.mano` binaries |
 
 ---
 
@@ -38,7 +38,9 @@ mano/
 │   ├── Architecture.md
 │   ├── Assembler.md
 │   ├── Assembly.md
+│   ├── Emulator.md
 │   ├── Instructions.md
+│   ├── IO.md
 │   └── Registers.md
 ├── src/
 │   ├── common/             # Shared utilities (file I/O, dynamic array)
@@ -98,13 +100,20 @@ Assemble it:
 manoasm subtract.masm        # produces subtract.mano
 ```
 
+Run it:
+
+```sh
+manoemu subtract.mano
+```
+
 Inspect the intermediate output if needed:
 
 ```sh
 manoasm --dump-tokens --dump-symbols --dump-ast subtract.masm
 ```
 
-See [docs/Assembler.md](docs/Assembler.md) for the full CLI reference and more examples.
+See [docs/Assembler.md](docs/Assembler.md) for the full assembler CLI reference and more examples.
+See [docs/Emulator.md](docs/Emulator.md) for the full emulator CLI reference.
 
 ---
 
@@ -124,6 +133,7 @@ See [docs/Assembler.md](docs/Assembler.md) for the full CLI reference and more e
 | Document | Description |
 |----------|-------------|
 | [docs/Assembler.md](docs/Assembler.md) | Assembler CLI, pipeline internals, and sample programs |
+| [docs/Emulator.md](docs/Emulator.md) | Emulator CLI, execution pipeline, I/O model, and interrupt handling |
 
 ---
 

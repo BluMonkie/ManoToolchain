@@ -146,3 +146,4 @@ END
 - [Assembly.md](Assembly.md) — Syntax, grammar, labels, pseudo-instructions
 - [Instructions.md](Instructions.md) — Full instruction set with opcodes
 - [Registers.md](Registers.md) — CPU register descriptions
+- [Emulator.md](Emulator.md) — Running the assembled binary
