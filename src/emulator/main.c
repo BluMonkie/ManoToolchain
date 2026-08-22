@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
 
     uint16_t *prog;
     size_t prog_len;
-    bool success = read_buffer16_be(argv[1], &prog, &prog_len);
+    bool success = read_buffer16_be(options.input_file_path, &prog, &prog_len);
 
     if (!success || prog_len > MANO_MEMORY_SIZE) {
         abort();
