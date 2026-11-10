@@ -24,3 +24,7 @@ void *xrealloc(void *ptr, size_t size) {
 
     return mem;
 }
+
+void xfree(void *ptr) {
+    free(ptr);
+}

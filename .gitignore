@@ -30,3 +30,6 @@ Thumbs.db
 *.tmp
 *.temp
 *~
+
+#clangd files
+.clangd
