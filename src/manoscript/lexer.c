@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "lexer.h"
+#include "defs.h"
 
 static void scan_token(LexerState *state);
 static void scan_identifier(LexerState *state);
@@ -103,6 +104,12 @@ static void scan_token(LexerState *state) {
             break;
         case ';':
             add_token(state, TOKEN_SEMICOLON);
+            break;
+        case '(':
+            add_token(state, TOKEN_LEFT_PAREN);
+            break;
+        case ')':
+            add_token(state, TOKEN_RIGHT_PAREN);
             break;
         case ' ':
         case '\t':

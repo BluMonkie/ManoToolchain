@@ -26,16 +26,6 @@ static const char *const TOKEN_TYPE_NAMES[] = {
     [TOKEN_EOF] = "TOKEN_EOF",
 };
 
-static const char *token_type_name(TokenType type) {
-    size_t count = sizeof(TOKEN_TYPE_NAMES) / sizeof(TOKEN_TYPE_NAMES[0]);
-
-    if ((size_t)type >= count || TOKEN_TYPE_NAMES[type] == NULL) {
-        return "TOKEN_UNKNOWN";
-    }
-
-    return TOKEN_TYPE_NAMES[type];
-}
-
 void print_tokens(FILE *stream, const Vector tokens) {
     for (size_t i = 0; i < tokens.size; i++) {
         const Token *token = vector_at_const(&tokens, i);
