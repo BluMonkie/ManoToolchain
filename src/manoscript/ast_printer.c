@@ -73,6 +73,26 @@ static void print_expr(Expr *expr, const char *prefix, bool last) {
             }
             break;
 
+        case EXPR_ASSIGNMENT:
+            if (expr->assignment.id) {
+                snprintf(label, sizeof(label), "Assignment: %.*s",
+                    (int)expr->assignment.id->lexeme.len,
+                    expr->assignment.id->lexeme.start);
+            } else {
+                snprintf(label, sizeof(label), "Assignment: <null>");
+            }
+
+            print_node(prefix, last, label);
+
+            {
+                char child_prefix[1024];
+                snprintf(child_prefix, sizeof(child_prefix),
+                    "%s%s", prefix, last ? "    " : "|   ");
+
+                print_expr(expr->assignment.value, child_prefix, true);
+            }
+            break;
+
         case EXPR_IDENTIFIER:
             if (expr->identifier.id) {
                 snprintf(label, sizeof(label), "Identifier: %.*s",

@@ -12,6 +12,7 @@ static void emit_stmt_inst(CodegenState *state, Stmt *stmt);
 static void emit_var_decl_inst(CodegenState *state, VarDeclStmt *stmt);
 
 static void emit_expr_inst(CodegenState *state, Expr *expr);
+static void emit_assignment_expr(CodegenState *state, AssignmentExpr *expr);
 static void emit_binary_expr(CodegenState *state, BinaryExpr *expr);
 static void emit_binary_add_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
 static void emit_binary_sub_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
@@ -84,6 +85,9 @@ static void emit_expr_inst(CodegenState *state, Expr *expr) {
         case EXPR_BINARY:
             emit_binary_expr(state, &expr->binary);
             break;
+        case EXPR_ASSIGNMENT:
+            emit_assignment_expr(state, &expr->assignment);
+            break;
         case EXPR_LITERAL:
             emit_literal_expr(state, &expr->literal);
             break;
@@ -98,6 +102,15 @@ static void emit_expr_inst(CodegenState *state, Expr *expr) {
             abort();
             break;
     }
+}
+
+static void emit_assignment_expr(CodegenState *state, AssignmentExpr *expr) {
+    // TODO: check the variable actually exists
+    emit_expr_inst(state, expr->value);
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = symbol_get_map_var(&state->symbols, expr->id->lexeme),
+    });
 }
 
 static void emit_binary_expr(CodegenState *state, BinaryExpr *expr) {

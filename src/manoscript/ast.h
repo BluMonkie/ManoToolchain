@@ -7,6 +7,7 @@ typedef enum {
     EXPR_BINARY,
     EXPR_UNARY,
     EXPR_GROUPING,
+    EXPR_ASSIGNMENT,
     EXPR_IDENTIFIER,
     EXPR_LITERAL,
 } ExprType;
@@ -32,6 +33,11 @@ typedef struct {
     Token *id;
 } IdentifierExpr;
 
+typedef struct {
+    Token *id;
+    Expr *value;
+} AssignmentExpr;
+
 typedef enum {
     LIT_NUMBER
 } LiteralType;
@@ -51,6 +57,7 @@ struct Expr {
         GroupingExpr grouping;
         IdentifierExpr identifier;
         LiteralExpr literal;
+        AssignmentExpr assignment;
     };
 };
 

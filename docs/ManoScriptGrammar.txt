@@ -1,10 +1,11 @@
 program = { decl | stmt } ;
 
 decl = vardecl ;
-vardecl = "var" , IDENTIFIER , ":", IDENTIFIER [, "=" , expr] , ";" ;
+vardecl = "var" , IDENTIFIER , ":" , IDENTIFIER [, "=" , expr] , ";" ;
 
 stmt = expr , ";" ;
 
-expr = term , { ( "+" | "-" ) , term } ;
-term = primary ;
+expr = assignment ;
+assignment = ( IDENTIFIER , "=" , assignment ) | term ;
+term = primary , { ( "+" | "-" ) , primary } ;
 primary = "(" , expr , ")" | LITERAL | IDENTIFIER ;

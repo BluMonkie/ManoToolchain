@@ -12,11 +12,13 @@
 static Stmt parse_vardecl(ParserState *state);
 static Stmt parse_statement(ParserState *state);
 static Expr parse_expr(ParserState *state);
+static Expr parse_assignment(ParserState *state);
 static Expr parse_term(ParserState *state);
 static Expr parse_primary(ParserState *state);
 
 static Token *advance(ParserState *state);
 static Token *peek(ParserState *state);
+static Token* peek_next(ParserState *state);
 static bool check(ParserState *state, TokenType type);
 static bool match(ParserState *state, TokenType type);
 static bool is_at_end(ParserState *state);
@@ -92,12 +94,38 @@ static Stmt parse_statement(ParserState *state) {
 }
 
 static Expr parse_expr(ParserState *state) {
-    Expr expr = parse_term(state);
+    Expr expr = parse_assignment(state);
+    return expr;
+}
+
+static Expr parse_assignment(ParserState *state) {
+    if (peek(state)->type == TOKEN_IDENTIFIER && peek_next(state) != nullptr && peek_next(state)->type == TOKEN_EQUAL) {
+        Token *id = peek(state);
+
+        advance(state);
+        advance(state);
+
+        Expr expr = parse_assignment(state);
+
+        return (Expr) {
+            .type = EXPR_ASSIGNMENT,
+            .assignment = {
+                .id = id,
+                .value = arena_alloc_type(&state->arena, sizeof(expr), &expr),
+            }
+        };
+    }
+
+    return parse_term(state);
+}
+
+static Expr parse_term(ParserState *state) {
+    Expr expr = parse_primary(state);
 
     while (match(state, TOKEN_PLUS) || match(state, TOKEN_MINUS)) {
         Token *tok = previous(state);
         
-        Expr right = parse_term(state);
+        Expr right = parse_primary(state);
 
         expr = (Expr) {
             .type = EXPR_BINARY,
@@ -110,10 +138,6 @@ static Expr parse_expr(ParserState *state) {
     }
     
     return expr;
-}
-
-static Expr parse_term(ParserState *state) {
-    return parse_primary(state);
 }
 
 static Expr parse_primary(ParserState *state) {
@@ -156,6 +180,11 @@ static Token *advance(ParserState *state) {
 
 static Token* peek(ParserState *state) {
     return (Token *) vector_at(&state->tokens, state->current);
+}
+
+static Token* peek_next(ParserState *state) {
+    if (state->current + 1 >= state->tokens.size) return nullptr;
+    return (Token *) vector_at(&state->tokens, state->current + 1);
 }
 
 static bool check(ParserState *state, TokenType type) {
