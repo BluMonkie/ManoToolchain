@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef struct {
     const char *start;
@@ -71,3 +72,45 @@ static inline const char *token_type_name(TokenType type) {
 
     return names[type] ? names[type] : "unknown";
 }
+
+typedef enum {
+    INST_MEM_AND,
+    INST_MEM_ADD,
+    INST_MEM_LDA,
+    INST_MEM_STA,
+    INST_MEM_BUN,
+    INST_MEM_BSA,
+    INST_MEM_ISZ,
+
+    INST_REG_CLA,
+    INST_REG_CLE,
+    INST_REG_CMA,
+    INST_REG_CME,
+    INST_REG_CIR,
+    INST_REG_CIL,
+    INST_REG_INC,
+    INST_REG_SPA,
+    INST_REG_SNA,
+    INST_REG_SZA,
+    INST_REG_SZE,
+    INST_REG_HLT,
+
+    INST_IO_INP,
+    INST_IO_OUT,
+    INST_IO_SKI,
+    INST_IO_SKO,
+    INST_IO_ION,
+    INST_IO_IOF,
+
+    INST_PSI_ORG,
+    INST_PSI_DEC,
+    INST_PSI_HEX,
+    INST_PSI_END,
+} ManoInstType;
+
+typedef struct {
+    const char *label;
+    ManoInstType type;
+    bool indirect;
+    const char *argument;
+} ManoInst;

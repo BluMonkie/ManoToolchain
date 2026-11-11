@@ -12,6 +12,7 @@ typedef struct {
 
 typedef struct {
     int value;
+    char value_str[16];
     char mangled[4];
 } ConstPair;
 

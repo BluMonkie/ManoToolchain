@@ -1,5 +1,7 @@
 #include <stdio.h>
 
+#include "asm_writer.h"
+#include "codegen.h"
 #include "common/file.h"
 #include "lexer.h"
 #include "debug.h"
@@ -19,4 +21,11 @@ int main(int argc, char **argv) {
     Program prog = parse_program(&parser);
 
     print_ast(&prog);
+
+    printf("\n\n\n");
+
+    CodegenState state = codegen_new(&prog);
+    emit_instructions(&state);
+
+    write_asm(state.instructions, stdout);
 }
