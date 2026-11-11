@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,6 +17,7 @@ static void emit_assignment_expr(CodegenState *state, AssignmentExpr *expr);
 static void emit_binary_expr(CodegenState *state, BinaryExpr *expr);
 static void emit_binary_add_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
 static void emit_binary_sub_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
+static void emit_unary_expr(CodegenState *state, UnaryExpr *expr);
 static void emit_identifier_expr(CodegenState *state, IdentifierExpr *expr);
 static void emit_literal_expr(CodegenState *state, LiteralExpr *expr);
 
@@ -98,8 +100,7 @@ static void emit_expr_inst(CodegenState *state, Expr *expr) {
             emit_identifier_expr(state, &expr->identifier);
             break;
         case EXPR_UNARY:
-            printf("Unary op not supported, aborting...\n");
-            abort();
+            emit_unary_expr(state, &expr->unary);
             break;
     }
 }
@@ -152,6 +153,29 @@ static void emit_binary_sub_expr(CodegenState *state, BinaryExpr *expr, const ch
         .type = INST_MEM_ADD,
         .argument = temp,
     });
+}
+
+static void emit_unary_expr(CodegenState *state, UnaryExpr *expr) {
+    emit_expr_inst(state, expr->operand);
+    switch (expr->op->type) {
+        case TOKEN_PLUS:
+            break;
+        case TOKEN_MINUS:
+            emit(state, (ManoInst) {
+                .type = INST_REG_CMA,
+            });
+            emit(state, (ManoInst) {
+                .type = INST_REG_INC,
+            });
+            break;
+        case TOKEN_TILDE:
+            emit(state, (ManoInst) {
+                .type = INST_REG_CMA,
+            });
+            break;
+        default:
+            assert(0 && "Unreachable code\n");
+    }
 }
 
 static void emit_identifier_expr(CodegenState *state, IdentifierExpr *expr) {

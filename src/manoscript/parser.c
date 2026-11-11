@@ -14,6 +14,7 @@ static Stmt parse_statement(ParserState *state);
 static Expr parse_expr(ParserState *state);
 static Expr parse_assignment(ParserState *state);
 static Expr parse_term(ParserState *state);
+static Expr parse_unary(ParserState *state);
 static Expr parse_primary(ParserState *state);
 
 static Token *advance(ParserState *state);
@@ -120,12 +121,12 @@ static Expr parse_assignment(ParserState *state) {
 }
 
 static Expr parse_term(ParserState *state) {
-    Expr expr = parse_primary(state);
+    Expr expr = parse_unary(state);
 
     while (match(state, TOKEN_PLUS) || match(state, TOKEN_MINUS)) {
         Token *tok = previous(state);
         
-        Expr right = parse_primary(state);
+        Expr right = parse_unary(state);
 
         expr = (Expr) {
             .type = EXPR_BINARY,
@@ -138,6 +139,24 @@ static Expr parse_term(ParserState *state) {
     }
     
     return expr;
+}
+
+static Expr parse_unary(ParserState *state) {
+    if (check(state, TOKEN_PLUS) || check(state, TOKEN_MINUS) || check(state, TOKEN_TILDE)) {
+        Token *tok = advance(state);
+
+        Expr expr = parse_unary(state);
+
+        return (Expr) {
+            .type = EXPR_UNARY,
+            .unary = {
+                .op = tok,
+                .operand = arena_alloc_type(&state->arena, sizeof(expr), &expr),
+            }
+        };
+    }
+
+    return parse_primary(state);
 }
 
 static Expr parse_primary(ParserState *state) {

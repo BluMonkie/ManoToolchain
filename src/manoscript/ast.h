@@ -21,7 +21,7 @@ typedef struct {
 } BinaryExpr;
 
 typedef struct {
-    Token op;
+    Token *op;
     Expr *operand;
 } UnaryExpr;
 

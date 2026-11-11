@@ -48,7 +48,7 @@ static void print_expr(Expr *expr, const char *prefix, bool last) {
 
         case EXPR_UNARY:
             snprintf(label, sizeof(label), "UnaryExpr: %s",
-                token_type_name(expr->unary.op.type));
+                token_type_name(expr->unary.op->type));
 
             print_node(prefix, last, label);
 

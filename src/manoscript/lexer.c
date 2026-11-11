@@ -89,6 +89,9 @@ static void scan_token(LexerState *state) {
         case '%':
             add_token(state, TOKEN_PERCENT);
             break;
+        case '~':
+            add_token(state, TOKEN_TILDE);
+            break;
         case '=':
             if (match(state, '=')) {
                 add_token(state, TOKEN_EQUAL_EQUAL);
