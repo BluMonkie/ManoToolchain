@@ -1,12 +1,13 @@
 program = { decl | stmt } ;
 
 decl = vardecl ;
-vardecl = "var" , IDENTIFIER , ":" , IDENTIFIER [, "=" , expr] , ";" ;
+vardecl = "var" , IDENTIFIER , ":" , IDENTIFIER , [ "=" , expr] , ";" ;
 
 stmt = expr , ";" ;
 
 expr = assignment ;
-assignment = ( IDENTIFIER , "=" , assignment ) | term ;
+assignment = ( IDENTIFIER , "=" , assignment ) | bitwise ;
+bitwise = term , { ( "|" | "&" ) , term } ;
 term = primary , { ( "+" | "-" ) , primary } ;
 unary = ( "+" | "-" | "~" ) , unary ;
 primary = "(" , expr , ")" | LITERAL | IDENTIFIER ;

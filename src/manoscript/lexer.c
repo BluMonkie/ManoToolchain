@@ -99,6 +99,15 @@ static void scan_token(LexerState *state) {
                 add_token(state, TOKEN_EQUAL);
             }
             break;
+        case '&':
+            add_token(state, TOKEN_AMP);
+            break;
+        case '|':
+            add_token(state, TOKEN_PIPE);
+            break;
+        case '^':
+            add_token(state, TOKEN_CARET);
+            break;
         case '@':
             add_token(state, TOKEN_AT);
             break;

@@ -17,6 +17,9 @@ static void emit_assignment_expr(CodegenState *state, AssignmentExpr *expr);
 static void emit_binary_expr(CodegenState *state, BinaryExpr *expr);
 static void emit_binary_add_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
 static void emit_binary_sub_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
+static void emit_binary_and_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
+static void emit_binary_or_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
+static void emit_binary_xor_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
 static void emit_unary_expr(CodegenState *state, UnaryExpr *expr);
 static void emit_identifier_expr(CodegenState *state, IdentifierExpr *expr);
 static void emit_literal_expr(CodegenState *state, LiteralExpr *expr);
@@ -131,6 +134,26 @@ static void emit_binary_expr(CodegenState *state, BinaryExpr *expr) {
         emit_binary_sub_expr(state, expr, temp);
     }
 
+    switch (expr->op->type) {
+        case TOKEN_PLUS:
+            emit_binary_add_expr(state, expr, temp);
+            break;
+        case TOKEN_MINUS:
+            emit_binary_sub_expr(state, expr, temp);
+            break;
+        case TOKEN_AMP:
+            emit_binary_and_expr(state, expr, temp);
+            break;
+        case TOKEN_PIPE:
+            emit_binary_or_expr(state, expr, temp);
+            break;
+        case TOKEN_CARET:
+            emit_binary_xor_expr(state, expr, temp);
+            break;
+        default:
+            assert(0 && "unreachable code");
+    }
+
     pop_temporary(state);
 }
 
@@ -153,6 +176,100 @@ static void emit_binary_sub_expr(CodegenState *state, BinaryExpr *expr, const ch
         .type = INST_MEM_ADD,
         .argument = temp,
     });
+}
+
+static void emit_binary_and_expr(CodegenState *state, BinaryExpr *expr, const char *temp) {
+    emit(state, (ManoInst) {
+        .type = INST_MEM_AND,
+        .argument = temp,
+    });
+}
+
+static void emit_binary_or_expr(CodegenState *state, BinaryExpr *expr, const char *temp) {
+    emit(state, (ManoInst) {
+        .type = INST_REG_CMA,
+    });
+    
+    const char *t1 = get_next_temporary(state);
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = t1,
+    });
+    
+    emit(state, (ManoInst) {
+        .type = INST_MEM_LDA,
+        .argument = temp,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_CMA,
+    });
+    
+    emit(state, (ManoInst) {
+        .type = INST_MEM_AND,
+        .argument = t1,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_CMA,
+    });
+
+    pop_temporary(state);
+}
+
+static void emit_binary_xor_expr(CodegenState *state, BinaryExpr *expr, const char *temp) {
+    const char *t1 = get_next_temporary(state);
+    const char *t2 = get_next_temporary(state);
+
+    // Preserve B
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = t1,
+    });
+
+    // Compute ~(A & ~B)
+    emit(state, (ManoInst) {
+        .type = INST_REG_CMA,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_AND,
+        .argument = temp,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_CMA,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = t2,
+    });
+    
+    // Compute ~(~A & B)
+    emit(state, (ManoInst) {
+        .type = INST_MEM_LDA,
+        .argument = temp,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_CMA,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_AND,
+        .argument = t1,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_CMA,
+    });
+    
+    // Compute ~(A & ~B) & ~(~A & B)
+    emit(state, (ManoInst) {
+        .type = INST_MEM_AND,
+        .argument = t2,
+    });
+
+    // Compute ~(~(A & ~B) & ~(~A & B)) = A ^ B
+    emit(state, (ManoInst) {
+        .type = INST_REG_CMA,
+    });
+    
+    pop_temporary(state);
+    pop_temporary(state);
 }
 
 static void emit_unary_expr(CodegenState *state, UnaryExpr *expr) {

@@ -13,10 +13,11 @@ typedef enum {
     // Operators
     // Single character
     TOKEN_PLUS, TOKEN_MINUS, TOKEN_STAR, TOKEN_PERCENT,
-    TOKEN_TILDE,
+    TOKEN_TILDE, TOKEN_CARET,
     // One or two characters
     TOKEN_SLASH,
     TOKEN_EQUAL, TOKEN_EQUAL_EQUAL,
+    TOKEN_AMP, TOKEN_PIPE,
     
     // Special operators
     TOKEN_AT,
@@ -53,6 +54,9 @@ static inline const char *token_type_name(TokenType type) {
         [TOKEN_SLASH]         = "/",
         [TOKEN_EQUAL]         = "=",
         [TOKEN_EQUAL_EQUAL]   = "==",
+        [TOKEN_AMP]           = "&",
+        [TOKEN_PIPE]          = "|",
+        [TOKEN_CARET]         = "^",
 
         [TOKEN_AT]            = "@",
 

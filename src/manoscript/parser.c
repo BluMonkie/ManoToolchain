@@ -12,6 +12,7 @@
 static Stmt parse_vardecl(ParserState *state);
 static Stmt parse_statement(ParserState *state);
 static Expr parse_expr(ParserState *state);
+static Expr parse_bitwise_expr(ParserState *state);
 static Expr parse_assignment(ParserState *state);
 static Expr parse_term(ParserState *state);
 static Expr parse_unary(ParserState *state);
@@ -117,7 +118,28 @@ static Expr parse_assignment(ParserState *state) {
         };
     }
 
-    return parse_term(state);
+    return parse_bitwise_expr(state);
+}
+
+static Expr parse_bitwise_expr(ParserState *state) {
+    Expr expr = parse_term(state);
+
+    while (match(state, TOKEN_AMP) || match(state, TOKEN_PIPE) || match(state, TOKEN_CARET)) {
+        Token *tok = previous(state);
+        
+        Expr right = parse_term(state);
+
+        expr = (Expr) {
+            .type = EXPR_BINARY,
+            .binary = {
+                .left = arena_alloc_type(&state->arena, sizeof(expr), &expr),
+                .op = tok,
+                .right = arena_alloc_type(&state->arena, sizeof(right), &right),
+            }
+        };
+    }
+    
+    return expr;
 }
 
 static Expr parse_term(ParserState *state) {

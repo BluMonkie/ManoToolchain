@@ -1,6 +1,6 @@
 CC := gcc
 
-CFLAGS := -Wall -Wextra -std=c23 
+CFLAGS := -Wall -Wextra -std=c23 -MMD -MP
 CPPFLAGS := -Isrc
 
 ASSEMBLER_CPPFLAGS := $(CPPFLAGS) -Isrc/assembler
@@ -17,6 +17,14 @@ ASSEMBLER_OBJ := $(ASSEMBLER_SRC:src/%.c=build/%.o)
 EMULATOR_OBJ := $(EMULATOR_SRC:src/%.c=build/%.o)
 MANOSCRIPT_OBJ := $(MANOSCRIPT_SRC:src/%.c=build/%.o)
 
+ALL_OBJ := $(COMMON_OBJ) $(ASSEMBLER_OBJ) $(EMULATOR_OBJ) $(MANOSCRIPT_OBJ)
+
+ifeq ($(OS),Windows_NT)
+    CLEAN_CMD := if exist build rmdir /s /q build & if exist bin rmdir /s /q bin
+else
+    CLEAN_CMD := rm -rf build bin
+endif
+
 .PHONY: all assembler emulator clean
 
 all: assembler emulator manoscript
@@ -26,6 +34,9 @@ assembler: bin/manoasm
 emulator: bin/manoemu
 
 manoscript: bin/manoscript
+
+clean:
+	$(CLEAN_CMD)
 
 bin/manoasm: $(COMMON_OBJ) $(ASSEMBLER_OBJ)
 	@mkdir -p $(@D)
@@ -55,5 +66,4 @@ build/manoscript/%.o: src/manoscript/%.c
 	@mkdir -p $(@D)
 	$(CC) $(MANOSCRIPT_CPPFLAGS) $(CFLAGS) -c $< -o $@
 
-clean:
-	rm -rf build bin
+-include $(ALL_OBJ:.o=.d)
