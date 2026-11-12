@@ -26,7 +26,7 @@ typedef enum {
     TOKEN_IDENTIFIER, TOKEN_NUMBER,
     
     // Keywords
-    TOKEN_VAR, TOKEN_ASM,
+    TOKEN_VAR, TOKEN_ASM, TOKEN_IF, TOKEN_ELSE,
     
     // Punctuation
     TOKEN_COLON, TOKEN_SEMICOLON,
@@ -66,6 +66,8 @@ static inline const char *token_type_name(TokenType type) {
 
         [TOKEN_VAR]           = "var",
         [TOKEN_ASM]           = "asm",
+        [TOKEN_IF]            = "if",
+        [TOKEN_ELSE]          = "else",
         
         [TOKEN_COLON]         = ":",
         [TOKEN_SEMICOLON]     = ";",

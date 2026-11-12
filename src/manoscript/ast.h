@@ -68,6 +68,7 @@ typedef enum {
     STMT_VARDECL,
     STMT_EXPRESSION,
     STMT_BLOCK,
+    STMT_IF,
     STMT_ASM,
 } StmtType;
 
@@ -82,9 +83,14 @@ typedef struct {
 } ExprStatement;
 
 typedef struct {
-    Stmt *stmts;
-    size_t count;
+    Vector stmts;
 } BlockStmt;
+
+typedef struct {
+    Expr *condition;
+    Stmt *then_arm;
+    Stmt *else_arm;
+} IfStmt;
 
 typedef struct {
     Token *asm;
@@ -96,6 +102,7 @@ struct Stmt {
         VarDeclStmt var_decl;
         ExprStatement expr;
         BlockStmt block;
+        IfStmt if_stmt;
         AsmStmt asm;
     };
 };

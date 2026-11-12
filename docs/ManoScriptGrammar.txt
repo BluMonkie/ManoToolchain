@@ -3,14 +3,15 @@ program = { decl | stmt } ;
 decl = vardecl ;
 vardecl = "var" , IDENTIFIER , ":" , IDENTIFIER , [ "=" , expr] , ";" ;
 
-stmt = asm | expr_stmt ;
+stmt = asm | block | if_stmt | expr_stmt ;
 asm = "asm" , "{" , { ASM_INST } , "}" ;
-block = "{" , { stmt } , "}" ;
+block = "{" , { stmt | vardecl } , "}" ;
+if_stmt = "if" , expr , block , [ "else" , ( block | if_stmt ) ] ;
 expr_stmt = expr , ";" ;
 
 expr = assignment ;
 assignment = ( IDENTIFIER , "=" , assignment ) | bitwise ;
-bitwise = term , { ( "|" | "&" ) , term } ;
+bitwise = term , { ( "|" | "&" | "^" ) , term } ;
 term = primary , { ( "+" | "-" ) , primary } ;
-unary = ( "+" | "-" | "~" ) , unary ;
+unary = ( "+" | "-" | "~" ) , unary | primary;
 primary = "(" , expr , ")" | LITERAL | IDENTIFIER ;

@@ -33,13 +33,13 @@ static void print_expr(Expr *expr, const char *prefix, bool last) {
                     "%s%s", prefix, last ? "    " : "|   ");
 
                 print_node(child_prefix, false, "Left");
-                char left_prefix[1024];
+                char left_prefix[2048];
                 snprintf(left_prefix, sizeof(left_prefix),
                     "%s|   ", child_prefix);
                 print_expr(expr->binary.left, left_prefix, true);
 
                 print_node(child_prefix, true, "Right");
-                char right_prefix[1024];
+                char right_prefix[2048];
                 snprintf(right_prefix, sizeof(right_prefix),
                     "%s    ", child_prefix);
                 print_expr(expr->binary.right, right_prefix, true);
@@ -119,6 +119,11 @@ static void print_expr(Expr *expr, const char *prefix, bool last) {
 }
 
 static void print_stmt(Stmt *stmt, const char *prefix, bool last) {
+    if (!stmt) {
+        print_node(prefix, last, "<null>");
+        return;
+    }
+
     char label[128];
 
     switch (stmt->type) {
@@ -159,7 +164,7 @@ static void print_stmt(Stmt *stmt, const char *prefix, bool last) {
             if (stmt->var_decl.initializer) {
                 print_node(child_prefix, true, "Initializer");
 
-                char init_prefix[1024];
+                char init_prefix[2048];
                 snprintf(init_prefix, sizeof(init_prefix),
                     "%s    ", child_prefix);
 
@@ -188,8 +193,40 @@ static void print_stmt(Stmt *stmt, const char *prefix, bool last) {
             snprintf(child_prefix, sizeof(child_prefix),
                 "%s%s", prefix, last ? "    " : "|   ");
 
-            for (size_t i = 0; i < stmt->block.count; i++) {
-                print_stmt(&stmt->block.stmts[i], child_prefix, i == stmt->block.count - 1);
+            for (size_t i = 0; i < stmt->block.stmts.size; i++) {
+                Stmt *child = vector_at(&stmt->block.stmts, i);
+                print_stmt(child, child_prefix, i == stmt->block.stmts.size - 1);
+            }
+            break;
+        }
+
+        case STMT_IF: {
+            print_node(prefix, last, "IfStmt");
+
+            char child_prefix[1024];
+            snprintf(child_prefix, sizeof(child_prefix),
+                "%s%s", prefix, last ? "    " : "|   ");
+
+            print_node(child_prefix, false, "Condition");
+            char cond_prefix[2048];
+            snprintf(cond_prefix, sizeof(cond_prefix),
+                "%s|   ", child_prefix);
+            print_expr(stmt->if_stmt.condition, cond_prefix, true);
+
+            bool has_else = stmt->if_stmt.else_arm != NULL;
+
+            print_node(child_prefix, !has_else, "Then");
+            char then_prefix[2048];
+            snprintf(then_prefix, sizeof(then_prefix),
+                "%s%s", child_prefix, !has_else ? "    " : "|   ");
+            print_stmt(stmt->if_stmt.then_arm, then_prefix, true);
+
+            if (has_else) {
+                print_node(child_prefix, true, "Else");
+                char else_prefix[2048];
+                snprintf(else_prefix, sizeof(else_prefix),
+                    "%s    ", child_prefix);
+                print_stmt(stmt->if_stmt.else_arm, else_prefix, true);
             }
             break;
         }

@@ -12,6 +12,7 @@ typedef struct {
     Vector temporaries;
     Arena arena;
     int temp_depth;
+    char *pending_label;
 } CodegenState;
 
 CodegenState codegen_new(Program *program);

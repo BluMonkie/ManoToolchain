@@ -13,6 +13,7 @@
 
 static void next_var_sym(SymbolMap *map, char out[4]);
 static void next_const_sym(SymbolMap *map, char out[4]);
+static void next_label_sym(SymbolMap *map, char out[4]);
 static char get_base36_char(unsigned int i);
 
 static Scope *scope_new(Scope *parent);
@@ -23,6 +24,7 @@ SymbolMap symbol_map_new() {
         .scope = scope_new(nullptr),
         .var_map = vector_new(sizeof(VarPair)),
         .const_map = vector_new(sizeof(ConstPair)),
+        .label_map = vector_new(sizeof(LabelPair)),
         .arena = arena_new(),
     };
 }
@@ -31,6 +33,7 @@ void symbol_map_free(SymbolMap *map) {
     scope_free(map->scope);
     vector_free(&map->var_map);
     vector_free(&map->const_map);
+    vector_free(&map->label_map);
     arena_drop(&map->arena);
 }
 
@@ -117,7 +120,36 @@ const char *symbol_get_map_const(SymbolMap *map, int num) {
 
     vector_push(&map->const_map, &pair);
 
-    return ((ConstPair *) vector_at(&map->const_map, map->const_map.size - 1))->mangled;
+    return mangled;
+}
+
+const char *symbol_get_label(SymbolMap *map) {
+    char *label = arena_alloc(&map->arena, sizeof(char) * 4);
+    next_label_sym(map, label);
+
+    LabelPair pair = {
+        .label = label,
+        .stmt = nullptr,
+        .return_label = nullptr,
+    };
+
+    vector_push(&map->label_map, &pair);
+    return label;
+}
+
+const char *symbol_get_label_for_block(SymbolMap *map, Stmt *stmt, char *return_label) {
+    char *label = arena_alloc(&map->arena, sizeof(char) * 4);
+    next_label_sym(map, label);
+
+    LabelPair pair = {
+        .label = label,
+        .stmt = stmt,
+        .return_label = arena_alloc_type(&map->arena, sizeof(char) * 4, return_label),
+    };
+
+    vector_push(&map->label_map, &pair);
+
+    return label;
 }
 
 void symbol_push_scope(SymbolMap *map) {
@@ -146,6 +178,15 @@ static void next_const_sym(SymbolMap *map, char out[4]) {
     int size = map->const_map.size;
 
     out[0] = 'c' + (size / (36 * 36));
+    out[1] = get_base36_char(size / 36);
+    out[2] = get_base36_char(size % 36);
+    out[3] = '\0';
+}
+
+static void next_label_sym(SymbolMap *map, char out[4]) {
+    int size = map->label_map.size;
+    
+    out[0] = 'l' + (size / (36 * 36));
     out[1] = get_base36_char(size / 36);
     out[2] = get_base36_char(size % 36);
     out[3] = '\0';

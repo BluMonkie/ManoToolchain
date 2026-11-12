@@ -13,7 +13,9 @@
 
 static void emit_stmt_inst(CodegenState *state, Stmt *stmt);
 static void emit_var_decl_inst(CodegenState *state, VarDeclStmt *stmt);
-static void emit_asm_stmt(CodegenState *state, AsmStmt *stmt);
+static void emit_asm_inst(CodegenState *state, AsmStmt *stmt);
+static void emit_block_inst(CodegenState *state, BlockStmt *stmt);
+static void emit_if_inst(CodegenState *state, IfStmt *stmt);
 
 static void emit_expr_inst(CodegenState *state, Expr *expr);
 static void emit_assignment_expr(CodegenState *state, AssignmentExpr *expr);
@@ -31,6 +33,7 @@ static void emit_data_section(CodegenState *state);
 static void emit_var_data_section(CodegenState *state);
 static void emit_const_data_section(CodegenState *state);
 static void emit_temp_data_section(CodegenState *state);
+static void emit_branches_section(CodegenState *state);
 
 static void emit(CodegenState *state, ManoInst inst);
 
@@ -73,6 +76,7 @@ void emit_instructions(CodegenState *state) {
         .type = INST_REG_HLT,
     });
     emit_data_section(state);
+    emit_branches_section(state);
     emit(state, (ManoInst) { .type = INST_PSI_END });
 }
 
@@ -85,7 +89,14 @@ static void emit_stmt_inst(CodegenState *state, Stmt *stmt) {
             emit_expr_inst(state, stmt->expr.expr);
             break;
         case STMT_ASM:
-            emit_asm_stmt(state, &stmt->asm);
+            emit_asm_inst(state, &stmt->asm);
+            break;
+        case STMT_BLOCK:
+            emit_block_inst(state, &stmt->block);
+            break;
+        case STMT_IF:
+            emit_if_inst(state, &stmt->if_stmt);
+            break;
     }
 }
 
@@ -101,7 +112,39 @@ static void emit_var_decl_inst(CodegenState *state, VarDeclStmt *stmt) {
     }
 }
 
-static void emit_asm_stmt(CodegenState *state, AsmStmt *stmt) {
+static void emit_block_inst(CodegenState *state, BlockStmt *stmt) {
+    for (size_t i = 0; i < stmt->stmts.size; i++) {
+        emit_stmt_inst(state, vector_at(&stmt->stmts, i));
+    }
+}
+
+static void emit_if_inst(CodegenState *state, IfStmt *stmt) {
+    emit_expr_inst(state, stmt->condition);
+    emit(state, (ManoInst) {
+        .type = INST_REG_SZA,
+    });
+
+    char *lreturn = symbol_get_label(&state->symbols);
+    char *lthen = symbol_get_label_for_block(&state->symbols, stmt->then_arm, lreturn);
+    char *lelse = symbol_get_label_for_block(&state->symbols, stmt->else_arm, lreturn);
+
+    emit(state, (ManoInst) {
+        .type = INST_MEM_BUN,
+        .argument = lthen,
+    });
+    if (stmt->else_arm != nullptr) {
+        emit(state, (ManoInst) {
+            .type = INST_MEM_BUN,
+            .argument = lelse,
+        });
+    }
+    emit(state, (ManoInst) {
+        .type = INST_REG_CLA,
+        .label = lreturn,
+    });
+}
+
+static void emit_asm_inst(CodegenState *state, AsmStmt *stmt) {
     StringSlice asm = stmt->asm->lexeme;
     const char *end = asm.start + asm.len;
     Vector sb = vector_new_with_capacity(sizeof(char), asm.len);
@@ -192,12 +235,7 @@ static void emit_binary_expr(CodegenState *state, BinaryExpr *expr) {
     });
 
     emit_expr_inst(state, expr->right);
-    
-    if (expr->op->type == TOKEN_PLUS) {
-        emit_binary_add_expr(state, expr, temp);
-    } else if (expr->op->type == TOKEN_MINUS) {
-        emit_binary_sub_expr(state, expr, temp);
-    }
+
 
     switch (expr->op->type) {
         case TOKEN_PLUS:
@@ -419,6 +457,22 @@ static void emit_temp_data_section(CodegenState *state) {
     }
 }
 
+static void emit_branches_section(CodegenState *state) {
+    for (size_t i = 0; i < state->symbols.label_map.size; i++) {
+        LabelPair *pair = vector_at(&state->symbols.label_map, i);
+        if (pair->stmt == nullptr) continue;
+
+        emit(state, (ManoInst) {
+            .type = INST_REG_CLA,
+            .label = pair->label,
+        });
+        emit_stmt_inst(state, pair->stmt);
+        emit(state, (ManoInst) {
+            .type = INST_MEM_BUN,
+            .argument = pair->return_label,
+        });
+    }
+}
 
 static const char *get_next_temporary(CodegenState *state) {
     size_t slot = state->temp_depth++;

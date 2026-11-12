@@ -9,9 +9,12 @@
 #include "common/arena.h"
 #include "common/vector.h"
 
+static Stmt parse_decl(ParserState *state);
 static Stmt parse_vardecl(ParserState *state);
 static Stmt parse_statement(ParserState *state);
 static Stmt parse_asm(ParserState *state);
+static Stmt parse_block(ParserState *state);
+static Stmt parse_if_stmt(ParserState *state);
 
 static Expr parse_expr(ParserState *state);
 static Expr parse_bitwise_expr(ParserState *state);
@@ -47,12 +50,7 @@ Program parse_program(ParserState *state) {
     Vector vec = vector_new(sizeof(Stmt));
     
     while (!is_at_end(state)) {
-        Stmt stmt;
-        if (match(state, TOKEN_VAR)) {
-            stmt = parse_vardecl(state);
-        } else {
-            stmt = parse_statement(state);
-        }
+        Stmt stmt = parse_decl(state);
 
         vector_push(&vec, &stmt);
     }
@@ -60,6 +58,14 @@ Program parse_program(ParserState *state) {
     return (Program) {
         .statements = vec,
     };
+}
+
+static Stmt parse_decl(ParserState *state) {
+    if (match(state, TOKEN_VAR)) {
+        return parse_vardecl(state);
+    } else {
+        return parse_statement(state);
+    }
 }
 
 static Stmt parse_vardecl(ParserState *state) {
@@ -88,8 +94,12 @@ static Stmt parse_vardecl(ParserState *state) {
 static Stmt parse_statement(ParserState *state) {
     if (match(state, TOKEN_ASM)) {
         return parse_asm(state);
+    } else if (match(state, TOKEN_LEFT_BRACE)) {
+        return parse_block(state);
+    } else if (match(state, TOKEN_IF)) {
+        return parse_if_stmt(state);
     }
-    
+
     Expr parsed = parse_expr(state);
     Expr *expr = arena_alloc_type(&state->arena, sizeof(parsed), &parsed);
     Stmt stmt = (Stmt) {
@@ -110,6 +120,51 @@ static Stmt parse_asm(ParserState *state) {
         .type = STMT_ASM,
         .asm = {
             .asm = asm_block,
+        }
+    };
+}
+
+static Stmt parse_block(ParserState *state) {
+    Vector stmts = vector_new(sizeof(Stmt));
+
+    while (!is_at_end(state) && !match(state, TOKEN_RIGHT_BRACE)) {
+        Stmt stmt = parse_decl(state);
+        vector_push(&stmts, &stmt);
+    }
+
+    return (Stmt) {
+        .type = STMT_BLOCK,
+        .block = {
+            .stmts = stmts,
+        }
+    };
+}
+
+static Stmt parse_if_stmt(ParserState *state) {
+    Expr expr = parse_expr(state);
+
+    consume(state, TOKEN_LEFT_BRACE);
+    Stmt then_arm = parse_block(state);
+
+    Stmt *else_arm = nullptr;
+
+    if (match(state, TOKEN_ELSE)) {
+        if (match(state, TOKEN_IF)) {
+            Stmt stmt = parse_if_stmt(state);
+            else_arm = arena_alloc_type(&state->arena, sizeof(stmt), &stmt);
+        } else {
+            consume(state, TOKEN_LEFT_BRACE);
+            Stmt stmt = parse_block(state);
+            else_arm = arena_alloc_type(&state->arena, sizeof(stmt), &stmt);
+        }
+    }
+
+    return (Stmt) {
+        .type = STMT_IF,
+        .if_stmt = {
+            .condition = arena_alloc_type(&state->arena, sizeof(expr), &expr),
+            .then_arm = arena_alloc_type(&state->arena, sizeof(then_arm), &then_arm),
+            .else_arm = else_arm,
         }
     };
 }

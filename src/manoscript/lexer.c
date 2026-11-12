@@ -40,6 +40,8 @@ typedef struct {
 static const Keyword KEYWORDS[] = {
     {"var", TOKEN_VAR},
     {"asm", TOKEN_ASM},
+    {"if", TOKEN_IF},
+    {"else", TOKEN_ELSE},
 };
 
 LexerState lexer_new(const char *src) {
