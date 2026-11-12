@@ -45,7 +45,7 @@ typedef struct {
     } data;
 } Token;
 
-static inline const char *token_type_name(TokenType type) {
+static inline const char *token_type_lexeme(TokenType type) {
     static const char *names[] = {
         [TOKEN_PLUS]          = "+",
         [TOKEN_MINUS]         = "-",

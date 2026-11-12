@@ -283,7 +283,7 @@ static Expr parse_primary(ParserState *state) {
             }
         };
     } else {
-        error(state, "Unexpected token: %s", token_type_name(peek(state)->type));
+        error(state, "Unexpected token: %s", token_type_lexeme(peek(state)->type));
         advance(state);
         return (Expr){0};
     }
@@ -323,7 +323,7 @@ Token *consume(ParserState *state, TokenType type) {
         return previous(state);
     }
     state->had_error = true;
-    fprintf(stderr, "ERROR while parsing: Expected %s, got %s.\n", token_type_name(type), token_type_name(peek(state)->type));   
+    fprintf(stderr, "ERROR while parsing: Expected %s, got %s.\n", token_type_lexeme(type), token_type_lexeme(peek(state)->type));   
     return NULL;
 }
 
