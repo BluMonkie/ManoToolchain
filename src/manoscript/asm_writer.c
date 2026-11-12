@@ -1,4 +1,5 @@
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "asm_writer.h"
@@ -29,6 +30,8 @@ static void write_inst(const ManoInst *inst, FILE *stream) {
         }
     } else if ((type >= INST_REG_CLA && type <= INST_IO_IOF) || type == INST_PSI_END) {
         fprintf(stream, "%s", get_inst_name(type));
+    } else if (type == INST_ASM) {
+        fprintf(stream, "%s", inst->argument);
     } else {
         fprintf(stream, "%s %s", get_inst_name(type), inst->argument);
     }

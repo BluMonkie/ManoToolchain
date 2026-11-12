@@ -11,6 +11,8 @@
 
 static Stmt parse_vardecl(ParserState *state);
 static Stmt parse_statement(ParserState *state);
+static Stmt parse_asm(ParserState *state);
+
 static Expr parse_expr(ParserState *state);
 static Expr parse_bitwise_expr(ParserState *state);
 static Expr parse_assignment(ParserState *state);
@@ -84,6 +86,10 @@ static Stmt parse_vardecl(ParserState *state) {
 }
 
 static Stmt parse_statement(ParserState *state) {
+    if (match(state, TOKEN_ASM)) {
+        return parse_asm(state);
+    }
+    
     Expr parsed = parse_expr(state);
     Expr *expr = arena_alloc_type(&state->arena, sizeof(parsed), &parsed);
     Stmt stmt = (Stmt) {
@@ -93,6 +99,19 @@ static Stmt parse_statement(ParserState *state) {
 
     consume(state, TOKEN_SEMICOLON);
     return stmt;
+}
+
+static Stmt parse_asm(ParserState *state) {
+    consume(state, TOKEN_LEFT_BRACE);
+    Token *asm_block = consume(state, TOKEN_ASM_BLOCK);
+    consume(state, TOKEN_RIGHT_BRACE);
+
+    return (Stmt) {
+        .type = STMT_ASM,
+        .asm = {
+            .asm = asm_block,
+        }
+    };
 }
 
 static Expr parse_expr(ParserState *state) {

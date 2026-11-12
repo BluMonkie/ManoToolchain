@@ -26,14 +26,15 @@ typedef enum {
     TOKEN_IDENTIFIER, TOKEN_NUMBER,
     
     // Keywords
-    TOKEN_VAR,
+    TOKEN_VAR, TOKEN_ASM,
     
     // Punctuation
     TOKEN_COLON, TOKEN_SEMICOLON,
     TOKEN_LEFT_PAREN, TOKEN_RIGHT_PAREN,
+    TOKEN_LEFT_BRACE, TOKEN_RIGHT_BRACE,
 
     // Special tokens
-    TOKEN_EOF,
+    TOKEN_ASM_BLOCK, TOKEN_EOF,
 } TokenType;
 
 typedef struct {
@@ -64,12 +65,16 @@ static inline const char *token_type_name(TokenType type) {
         [TOKEN_NUMBER]        = "number",
 
         [TOKEN_VAR]           = "var",
-
+        [TOKEN_ASM]           = "asm",
+        
         [TOKEN_COLON]         = ":",
         [TOKEN_SEMICOLON]     = ";",
         [TOKEN_LEFT_PAREN]    = "(",
         [TOKEN_RIGHT_PAREN]   = ")",
-
+        [TOKEN_LEFT_BRACE]    = "{",
+        [TOKEN_RIGHT_BRACE]   = "}",
+        
+        [TOKEN_ASM_BLOCK]     = "asm block",
         [TOKEN_EOF]           = "EOF",
     };
 
@@ -112,6 +117,8 @@ typedef enum {
     INST_PSI_DEC,
     INST_PSI_HEX,
     INST_PSI_END,
+
+    INST_ASM,
 } ManoInstType;
 
 typedef struct {

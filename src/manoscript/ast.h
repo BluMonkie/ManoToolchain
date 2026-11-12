@@ -2,6 +2,7 @@
 
 #include "defs.h"
 #include "common/vector.h"
+#include <stddef.h>
 
 typedef enum {
     EXPR_BINARY,
@@ -61,9 +62,13 @@ struct Expr {
     };
 };
 
+typedef struct Stmt Stmt;
+
 typedef enum {
     STMT_VARDECL,
     STMT_EXPRESSION,
+    STMT_BLOCK,
+    STMT_ASM,
 } StmtType;
 
 typedef struct {
@@ -76,13 +81,24 @@ typedef struct {
     Expr *expr;
 } ExprStatement;
 
-typedef struct Stmt {
+typedef struct {
+    Stmt *stmts;
+    size_t count;
+} BlockStmt;
+
+typedef struct {
+    Token *asm;
+} AsmStmt;
+
+struct Stmt {
     StmtType type;
     union {
         VarDeclStmt var_decl;
         ExprStatement expr;
+        BlockStmt block;
+        AsmStmt asm;
     };
-} Stmt;
+};
 
 typedef struct {
     Vector statements;

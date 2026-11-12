@@ -2,8 +2,10 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "codegen.h"
+#include "common/arena.h"
 #include "ast.h"
 #include "defs.h"
 #include "symbol_map.h"
@@ -11,6 +13,7 @@
 
 static void emit_stmt_inst(CodegenState *state, Stmt *stmt);
 static void emit_var_decl_inst(CodegenState *state, VarDeclStmt *stmt);
+static void emit_asm_stmt(CodegenState *state, AsmStmt *stmt);
 
 static void emit_expr_inst(CodegenState *state, Expr *expr);
 static void emit_assignment_expr(CodegenState *state, AssignmentExpr *expr);
@@ -33,7 +36,9 @@ static void emit(CodegenState *state, ManoInst inst);
 
 static const char *get_next_temporary(CodegenState *state);
 static void pop_temporary(CodegenState *state);
+
 static char get_base36_char(unsigned int i);
+static bool is_alphanumeric(char c);
 
 CodegenState codegen_new(Program *program) {
     return (CodegenState) {
@@ -41,8 +46,17 @@ CodegenState codegen_new(Program *program) {
         .instructions = vector_new(sizeof(ManoInst)),
         .symbols = symbol_map_new(),
         .temporaries = vector_new_with_capacity(sizeof(char) * 4, 32),
+        .arena = arena_new(),
     };
 }
+
+void codegen_free(CodegenState *state) {
+    vector_free(&state->instructions);  
+    vector_free(&state->temporaries);
+    
+    symbol_map_free(&state->symbols);
+    arena_drop(&state->arena);
+} 
 
 void emit_instructions(CodegenState *state) {
     emit(state, (ManoInst) {
@@ -70,6 +84,8 @@ static void emit_stmt_inst(CodegenState *state, Stmt *stmt) {
         case STMT_EXPRESSION:
             emit_expr_inst(state, stmt->expr.expr);
             break;
+        case STMT_ASM:
+            emit_asm_stmt(state, &stmt->asm);
     }
 }
 
@@ -83,6 +99,55 @@ static void emit_var_decl_inst(CodegenState *state, VarDeclStmt *stmt) {
             .argument = symbol_get_map_var(&state->symbols, stmt->identifier->lexeme),
         });
     }
+}
+
+static void emit_asm_stmt(CodegenState *state, AsmStmt *stmt) {
+    StringSlice asm = stmt->asm->lexeme;
+    const char *end = asm.start + asm.len;
+    Vector sb = vector_new_with_capacity(sizeof(char), asm.len);
+
+    // TODO: Verify the variable actually exists
+    const char *c = asm.start;
+    while (c < end && (*c == ' ' || *c == '\t' || *c == '\r' || *c == '\n')) c++;
+
+    while (c < end) {
+        
+        if (*c == '$') {
+            const char *begin = ++c;
+
+            while (c < end && is_alphanumeric(*c)) c++;
+
+            const char *substitute = symbol_get_map_var(&state->symbols, (StringSlice) {
+                .start = begin,
+                .len = c - begin,
+            });
+
+            for (int i = 0; i < 3; i++) {
+                vector_push(&sb, &substitute[i]);
+            }
+        } else if (*c == '\n') {
+            vector_push(&sb, c);
+            c++;
+            while (c < end && (*c == ' ' || *c == '\t' || *c == '\r' || *c == '\n')) c++;
+        } else {
+            vector_push(&sb, c);
+            c++;
+        }
+    }
+    char _;
+    if (*((char *) vector_at(&sb, sb.size - 1)) == '\n') vector_pop(&sb, &_);
+
+    char *str = arena_alloc(&state->arena, sb.size + 1);
+    for (size_t i = 0; i < sb.size; i++) {
+        str[i] = *((char *) vector_at(&sb, i));
+    }
+    str[sb.size] = '\0';
+
+    emit(state, (ManoInst) {
+        .type = INST_ASM,
+        .argument = str,
+    });
+    vector_free(&sb);
 }
 
 static void emit_expr_inst(CodegenState *state, Expr *expr) {
@@ -333,7 +398,6 @@ static void emit_var_data_section(CodegenState *state) {
 static void emit_const_data_section(CodegenState *state) {
     for (size_t i = 0; i < state->symbols.const_map.size; i++) {
         ConstPair *pair = vector_at(&state->symbols.const_map, i);
-        snprintf(pair->value_str, 16, "%d", pair->value);
 
         emit(state, (ManoInst) {
             .type = INST_PSI_DEC,
@@ -385,4 +449,8 @@ static char get_base36_char(unsigned int i) {
     static const char alphanum[] = "0123456789abcdefghijklmnopqrstuvwxyz";
     
     return alphanum[i % 36];
+}
+
+static bool is_alphanumeric(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || (c >= '0' && c <= '9');
 }

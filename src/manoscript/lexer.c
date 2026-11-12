@@ -8,6 +8,7 @@
 
 static void scan_token(LexerState *state);
 static void scan_identifier(LexerState *state);
+static void scan_asm(LexerState *state);
 static void scan_number(LexerState *state, char first);
 static void skip_single_comment(LexerState *state);
 
@@ -15,11 +16,13 @@ static char advance(LexerState *state);
 static char peek(LexerState *state);
 static bool check(LexerState *state, char c);
 static bool match(LexerState *state, char c);
+static void consume(LexerState *state, char c);
 
 static void add_token(LexerState *state, TokenType type);
 static void add_number_token(LexerState *state, TokenType type, int64_t number);
 
 static TokenType match_lexeme_type(const char *str, size_t len);
+static void skip_whitespace(LexerState *state);
 
 static bool is_alpha(char c);
 static bool is_number(char c);
@@ -36,6 +39,7 @@ typedef struct {
 
 static const Keyword KEYWORDS[] = {
     {"var", TOKEN_VAR},
+    {"asm", TOKEN_ASM},
 };
 
 LexerState lexer_new(const char *src) {
@@ -123,6 +127,12 @@ static void scan_token(LexerState *state) {
         case ')':
             add_token(state, TOKEN_RIGHT_PAREN);
             break;
+        case '{':
+            add_token(state, TOKEN_LEFT_BRACE);
+            break;
+        case '}':
+            add_token(state, TOKEN_RIGHT_BRACE);
+            break;
         case ' ':
         case '\t':
         case '\r':
@@ -145,6 +155,26 @@ static void scan_identifier(LexerState *state) {
     TokenType type = match_lexeme_type(start, len);
 
     add_token(state, type);
+    
+    if (type == TOKEN_ASM) {
+        scan_asm(state);   
+    }
+}
+
+static void scan_asm(LexerState *state) {
+    skip_whitespace(state);
+    
+    state->begin = state->current;
+    consume(state, '{');
+    add_token(state, TOKEN_LEFT_BRACE);
+
+    state->begin = state->current;
+
+    while (!is_at_end(state) && !check(state, '}')) {
+        advance(state);
+    }
+
+    add_token(state, TOKEN_ASM_BLOCK);
 }
 
 static void scan_number(LexerState *state, char first) {
@@ -169,6 +199,9 @@ static char advance(LexerState *state) {
 }
 
 static char peek(LexerState *state) {
+    if (is_at_end(state)) {
+        return '\0';
+    }
     return state->src[state->current];
 }
 
@@ -182,6 +215,13 @@ static bool match(LexerState *state, char c) {
         return true;
     }
     return false;
+}
+
+static void consume(LexerState *state, char c) {
+    if (!match(state, c)) {
+        char curr = peek(state);
+        error(state, "Expected %c, got %s", c, curr == '\0' ? "EOF" : &curr);
+    }
 }
 
 static void add_token(LexerState *state, TokenType type) {
@@ -224,6 +264,12 @@ static TokenType match_lexeme_type(const char *str, size_t len) {
     return TOKEN_IDENTIFIER;
 }
 
+static void skip_whitespace(LexerState *state) {
+    while (peek(state) == ' ' || peek(state) == '\t' || peek(state) == '\n' || peek(state) == '\r') {
+        advance(state);
+    }
+}
+
 static bool is_alpha(char c) {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
 }
@@ -241,7 +287,7 @@ static bool is_alphanumeric(char c) {
 }
 
 static bool is_at_end(LexerState *state) {
-    return peek(state) == '\0';
+    return state->src[state->current] == '\0';
 }
 
 static void error(LexerState *state, const char *msg, ...) {

@@ -1,8 +1,7 @@
+#include <lexer.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-
-#include "lexer.h"
 
 typedef struct {
     const char *str;
@@ -207,7 +206,7 @@ void scan_hex_digit(LexerState *state) {
 
     if (state->current == digits_start) {
         state->had_error = true;
-        fprintf(stderr, "ERROR: Expected decimal value.\n");
+        fprintf(stderr, "ERROR: Expected hexadecimal value.\n");
         return;
     }
 

@@ -180,6 +180,58 @@ static void print_stmt(Stmt *stmt, const char *prefix, bool last) {
             print_expr(stmt->expr.expr, child_prefix, true);
             break;
         }
+
+        case STMT_BLOCK: {
+            print_node(prefix, last, "Block");
+
+            char child_prefix[1024];
+            snprintf(child_prefix, sizeof(child_prefix),
+                "%s%s", prefix, last ? "    " : "|   ");
+
+            for (size_t i = 0; i < stmt->block.count; i++) {
+                print_stmt(&stmt->block.stmts[i], child_prefix, i == stmt->block.count - 1);
+            }
+            break;
+        }
+
+        case STMT_ASM: {
+            print_node(prefix, last, "AsmStmt");
+
+            char child_prefix[1024];
+            snprintf(child_prefix, sizeof(child_prefix),
+                "%s%s", prefix, last ? "    " : "|   ");
+
+            if (stmt->asm.asm) {
+                const char *src = stmt->asm.asm->lexeme.start;
+                size_t len = stmt->asm.asm->lexeme.len;
+
+                size_t i = 0;
+                while (i < len) {
+                    while (i < len && (src[i] == '\r' || src[i] == '\n')) i++;
+                    if (i >= len) break;
+
+                    size_t line_start = i;
+                    while (i < len && src[i] != '\r' && src[i] != '\n') i++;
+                    size_t line_end = i;
+
+                    while (line_start < line_end && (src[line_start] == ' ' || src[line_start] == '\t')) line_start++;
+                    while (line_end > line_start && (src[line_end - 1] == ' ' || src[line_end - 1] == '\t')) line_end--;
+
+                    if (line_end > line_start) {
+                        size_t next = i;
+                        while (next < len && (src[next] == ' ' || src[next] == '\t' || src[next] == '\r' || src[next] == '\n')) next++;
+                        bool is_last = (next >= len);
+
+                        char line_buf[256];
+                        snprintf(line_buf, sizeof(line_buf), "%.*s", (int)(line_end - line_start), src + line_start);
+                        print_node(child_prefix, is_last, line_buf);
+                    }
+                }
+            } else {
+                print_node(child_prefix, true, "<null>");
+            }
+            break;
+        }
     }
 }
 

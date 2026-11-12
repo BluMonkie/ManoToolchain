@@ -3,7 +3,10 @@ program = { decl | stmt } ;
 decl = vardecl ;
 vardecl = "var" , IDENTIFIER , ":" , IDENTIFIER , [ "=" , expr] , ";" ;
 
-stmt = expr , ";" ;
+stmt = asm | expr_stmt ;
+asm = "asm" , "{" , { ASM_INST } , "}" ;
+block = "{" , { stmt } , "}" ;
+expr_stmt = expr , ";" ;
 
 expr = assignment ;
 assignment = ( IDENTIFIER , "=" , assignment ) | bitwise ;
