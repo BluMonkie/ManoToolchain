@@ -17,8 +17,10 @@ static Stmt parse_block(ParserState *state);
 static Stmt parse_if_stmt(ParserState *state);
 
 static Expr parse_expr(ParserState *state);
-static Expr parse_bitwise_expr(ParserState *state);
 static Expr parse_assignment(ParserState *state);
+static Expr parse_comparison(ParserState *state);
+static Expr parse_bitwise_expr(ParserState *state);
+static Expr parse_shift_expr(ParserState *state);
 static Expr parse_term(ParserState *state);
 static Expr parse_unary(ParserState *state);
 static Expr parse_primary(ParserState *state);
@@ -192,13 +194,55 @@ static Expr parse_assignment(ParserState *state) {
         };
     }
 
-    return parse_bitwise_expr(state);
+    return parse_comparison(state);
+}
+
+static Expr parse_comparison(ParserState *state) {
+    Expr expr = parse_bitwise_expr(state);
+
+    if (match(state, TOKEN_LESS) || match(state, TOKEN_GREATER) || match(state, TOKEN_EQUAL_EQUAL) || match(state, TOKEN_PIPE_EQUAL)) {
+        Token *tok = previous(state);
+        
+        Expr right = parse_bitwise_expr(state);
+
+        expr = (Expr) {
+            .type = EXPR_BINARY,
+            .binary = {
+                .left = arena_alloc_type(&state->arena, sizeof(expr), &expr),
+                .op = tok,
+                .right = arena_alloc_type(&state->arena, sizeof(right), &right),
+            }
+        };
+    }
+
+    return expr;
 }
 
 static Expr parse_bitwise_expr(ParserState *state) {
-    Expr expr = parse_term(state);
+    Expr expr = parse_shift_expr(state);
 
     while (match(state, TOKEN_AMP) || match(state, TOKEN_PIPE) || match(state, TOKEN_CARET)) {
+        Token *tok = previous(state);
+        
+        Expr right = parse_shift_expr(state);
+
+        expr = (Expr) {
+            .type = EXPR_BINARY,
+            .binary = {
+                .left = arena_alloc_type(&state->arena, sizeof(expr), &expr),
+                .op = tok,
+                .right = arena_alloc_type(&state->arena, sizeof(right), &right),
+            }
+        };
+    }
+    
+    return expr;
+}
+
+static Expr parse_shift_expr(ParserState *state) {
+    Expr expr = parse_term(state);
+
+    while (match(state, TOKEN_LESS_LESS) || match(state, TOKEN_GREATER_GREATER)) {
         Token *tok = previous(state);
         
         Expr right = parse_term(state);

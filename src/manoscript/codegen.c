@@ -375,6 +375,32 @@ static void emit_binary_xor_expr(CodegenState *state, BinaryExpr *expr, const ch
     pop_temporary(state);
 }
 
+// static void emit_binary_less_expr(CodegenState *state, const char *temp) {
+//     const char *true_c = symbol_get_map_const(&state->symbols, 1);
+//     const char *false_c = symbol_get_map_const(&state->symbols, 0);
+//     emit(state, (ManoInst) {
+//         .type = INST_REG_CMA,
+//     });
+//     emit(state, (ManoInst) {
+//         .type = INST_REG_INC,
+//     });
+//     emit(state, (ManoInst) {
+//         .type = INST_MEM_ADD,
+//         .argument = temp,
+//     });
+//     emit(state, (ManoInst) {
+//         .type = INST_REG_SNA,
+//     });
+//     emit(state, (ManoInst) {
+//         .type = INST_MEM_LDA,
+//         .argument = false_c,
+//     });
+//     emit(state, (ManoInst) {
+//         .type = INST_MEM_LDA,
+//         .argument = true_c,
+//     });
+// }
+
 static void emit_unary_expr(CodegenState *state, UnaryExpr *expr) {
     emit_expr_inst(state, expr->operand);
     switch (expr->op->type) {

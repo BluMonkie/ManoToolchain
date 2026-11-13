@@ -105,6 +105,11 @@ static void scan_token(LexerState *state) {
                 add_token(state, TOKEN_EQUAL);
             }
             break;
+        case '!':
+            if (match(state, '=')) {
+                add_token(state, TOKEN_PIPE_EQUAL);
+            }
+            break;
         case '&':
             add_token(state, TOKEN_AMP);
             break;
@@ -113,6 +118,24 @@ static void scan_token(LexerState *state) {
             break;
         case '^':
             add_token(state, TOKEN_CARET);
+            break;
+        case '<':
+            if (match(state, '=')) {
+                add_token(state, TOKEN_LESS_EQUAL);
+            } else if (match(state, '<')) {
+                add_token(state, TOKEN_LESS_LESS);
+            } else {
+                add_token(state, TOKEN_LESS);
+            }
+            break;
+        case '>':
+            if (match(state, '=')) {
+                add_token(state, TOKEN_GREATER_EQUAL);
+            } else if (match(state, '>')) {
+                add_token(state, TOKEN_GREATER_GREATER);
+            } else {
+                add_token(state, TOKEN_GREATER);
+            }
             break;
         case '@':
             add_token(state, TOKEN_AT);
