@@ -8,8 +8,10 @@
 #include "common/arena.h"
 #include "ast.h"
 #include "defs.h"
+#include "intrinsics.h"
 #include "symbol_map.h"
 #include "common/vector.h"
+#include "intrinsics.inc"
 
 static void emit_stmt_inst(CodegenState *state, Stmt *stmt);
 static void emit_var_decl_inst(CodegenState *state, VarDeclStmt *stmt);
@@ -17,6 +19,7 @@ static void emit_fun_decl_inst(CodegenState *state, FunDeclStmt *stmt);
 static void emit_asm_inst(CodegenState *state, AsmStmt *stmt);
 static void emit_block_inst(CodegenState *state, BlockStmt *stmt);
 static void emit_if_inst(CodegenState *state, IfStmt *stmt);
+static void emit_while_inst(CodegenState *state, WhileStmt *stmt);
 
 static void emit_expr_inst(CodegenState *state, Expr *expr);
 static void emit_assignment_expr(CodegenState *state, AssignmentExpr *expr);
@@ -26,6 +29,7 @@ static void emit_binary_sub_expr(CodegenState *state, BinaryExpr *expr, const ch
 static void emit_binary_and_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
 static void emit_binary_or_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
 static void emit_binary_xor_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
+static void emit_binary_comp_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
 static void emit_unary_expr(CodegenState *state, UnaryExpr *expr);
 static void emit_identifier_expr(CodegenState *state, IdentifierExpr *expr);
 static void emit_literal_expr(CodegenState *state, LiteralExpr *expr);
@@ -78,8 +82,9 @@ void emit_instructions(CodegenState *state) {
     emit(state, (ManoInst) {
         .type = INST_REG_HLT,
     });
-    emit_branches_section(state);
     emit_function_section(state);
+    emit_branches_section(state);
+    emit_intrinsics(state);
     emit_data_section(state);
     emit(state, (ManoInst) { .type = INST_PSI_END });
 }
@@ -103,6 +108,9 @@ static void emit_stmt_inst(CodegenState *state, Stmt *stmt) {
             break;
         case STMT_IF:
             emit_if_inst(state, &stmt->if_stmt);
+            break;
+        case STMT_WHILE:
+            emit_while_inst(state, &stmt->while_stmt);
             break;
     }
 }
@@ -153,6 +161,24 @@ static void emit_if_inst(CodegenState *state, IfStmt *stmt) {
     emit(state, (ManoInst) {
         .type = INST_REG_CLA,
         .label = lreturn,
+    });
+}
+
+static void emit_while_inst(CodegenState *state, WhileStmt *stmt) {
+    const char *lreturn = symbol_get_label(&state->symbols);
+    const char *lloop = symbol_get_label_for_block(&state->symbols, stmt->body, lreturn);
+    
+    emit(state, (ManoInst) {
+        .type = INST_REG_CLA,
+        .label = lreturn,
+    });
+    emit_expr_inst(state, stmt->condition);
+    emit(state, (ManoInst) {
+        .type = INST_REG_SZA,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_BUN,
+        .argument = lloop,
     });
 }
 
@@ -267,6 +293,14 @@ static void emit_binary_expr(CodegenState *state, BinaryExpr *expr) {
             break;
         case TOKEN_CARET:
             emit_binary_xor_expr(state, expr, temp);
+            break;
+        case TOKEN_LESS:
+        case TOKEN_LESS_EQUAL:
+        case TOKEN_GREATER:
+        case TOKEN_GREATER_EQUAL:
+        case TOKEN_EQUAL_EQUAL:
+        case TOKEN_BANG_EQUAL:
+            emit_binary_comp_expr(state, expr, temp);
             break;
         default:
             assert(0 && "unreachable code");
@@ -390,31 +424,48 @@ static void emit_binary_xor_expr(CodegenState *state, BinaryExpr *expr, const ch
     pop_temporary(state);
 }
 
-// static void emit_binary_less_expr(CodegenState *state, const char *temp) {
-//     const char *true_c = symbol_get_map_const(&state->symbols, 1);
-//     const char *false_c = symbol_get_map_const(&state->symbols, 0);
-//     emit(state, (ManoInst) {
-//         .type = INST_REG_CMA,
-//     });
-//     emit(state, (ManoInst) {
-//         .type = INST_REG_INC,
-//     });
-//     emit(state, (ManoInst) {
-//         .type = INST_MEM_ADD,
-//         .argument = temp,
-//     });
-//     emit(state, (ManoInst) {
-//         .type = INST_REG_SNA,
-//     });
-//     emit(state, (ManoInst) {
-//         .type = INST_MEM_LDA,
-//         .argument = false_c,
-//     });
-//     emit(state, (ManoInst) {
-//         .type = INST_MEM_LDA,
-//         .argument = true_c,
-//     });
-// }
+static void emit_binary_comp_expr(CodegenState *state, BinaryExpr *expr, const char *temp) {
+    emit(state, (ManoInst) {
+        .type = INST_REG_CMA,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_INC,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_ADD,
+        .argument = temp,
+    });
+    
+    const char *jmp_label;
+
+    switch (expr->op->type) {
+        case TOKEN_LESS:
+            jmp_label = enable_intrinsic(state, INT_CMP_LS);
+            break;
+        case TOKEN_GREATER:
+            jmp_label = enable_intrinsic(state, INT_CMP_GR);
+            break;
+        case TOKEN_LESS_EQUAL:
+            jmp_label = enable_intrinsic(state, INT_CMP_LS_EQ);
+            break;
+        case TOKEN_GREATER_EQUAL:
+            jmp_label = enable_intrinsic(state, INT_CMP_GR_EQ);
+            break;
+        case TOKEN_EQUAL_EQUAL:
+            jmp_label = enable_intrinsic(state, INT_CMP_EQ);
+            break;
+        case TOKEN_BANG_EQUAL:
+            jmp_label = enable_intrinsic(state, INT_CMP_NEQ);
+            break;
+        default:
+            assert(0 && "Unreachable");
+    }
+
+    emit(state, (ManoInst) {
+        .type = INST_MEM_BSA,
+        .argument = jmp_label,
+    });
+}
 
 static void emit_unary_expr(CodegenState *state, UnaryExpr *expr) {
     emit_expr_inst(state, expr->operand);

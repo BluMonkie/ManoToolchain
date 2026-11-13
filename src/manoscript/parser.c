@@ -16,6 +16,7 @@ static Stmt parse_statement(ParserState *state);
 static Stmt parse_asm(ParserState *state);
 static Stmt parse_block(ParserState *state);
 static Stmt parse_if_stmt(ParserState *state);
+static Stmt parse_while_stmt(ParserState *state);
 
 static Expr parse_expr(ParserState *state);
 static Expr parse_assignment(ParserState *state);
@@ -36,7 +37,7 @@ static bool is_at_end(ParserState *state);
 static Token *previous(ParserState *state);
 static Token *consume(ParserState *state, TokenType type);
 
-static void error(ParserState *state, const char *format, ...);
+static void error(ParserState *state, int line, const char *format, ...);
 
 ParserState parser_new(char *src, Vector tokens) {
     return (ParserState) {
@@ -147,6 +148,8 @@ static Stmt parse_statement(ParserState *state) {
         return parse_block(state);
     } else if (match(state, TOKEN_IF)) {
         return parse_if_stmt(state);
+    } else if (match(state, TOKEN_WHILE)) {
+        return parse_while_stmt(state);
     }
 
     Expr parsed = parse_expr(state);
@@ -214,6 +217,21 @@ static Stmt parse_if_stmt(ParserState *state) {
             .condition = arena_alloc_type(&state->arena, sizeof(expr), &expr),
             .then_arm = arena_alloc_type(&state->arena, sizeof(then_arm), &then_arm),
             .else_arm = else_arm,
+        }
+    };
+}
+
+static Stmt parse_while_stmt(ParserState *state) {
+    Expr expr = parse_expr(state);
+
+    consume(state, TOKEN_LEFT_BRACE);
+    Stmt body = parse_block(state);
+
+    return (Stmt) {
+        .type = STMT_WHILE,
+        .while_stmt = {
+            .condition = arena_alloc_type(&state->arena, sizeof(expr), &expr),
+            .body = arena_alloc_type(&state->arena, sizeof(body), &body),
         }
     };
 }
@@ -395,7 +413,7 @@ static Expr parse_primary(ParserState *state) {
             }
         };
     } else {
-        error(state, "Unexpected token: %s", token_type_lexeme(peek(state)->type));
+        error(state, peek(state)->line, "Unexpected token: %s", token_type_lexeme(peek(state)->type));
         advance(state);
         return (Expr){0};
     }
@@ -434,22 +452,24 @@ Token *consume(ParserState *state, TokenType type) {
     if (match(state, type)) {
         return previous(state);
     }
-    state->had_error = true;
-    fprintf(stderr, "ERROR while parsing: Expected %s, got %s.\n", token_type_lexeme(type), token_type_lexeme(peek(state)->type));   
-    return NULL;
+    Token *token = peek(state);
+    error(state, token->line, "ERROR while parsing: Expected %s, got %s.\n", token_type_lexeme(type), token_type_lexeme(peek(state)->type));
+    return nullptr;
 }
 
 static bool is_at_end(ParserState *state) {
     return check(state, TOKEN_EOF);
 }
 
-static void error(ParserState *state, const char *format, ...) {
+static void error(ParserState *state, int line, const char *msg, ...) {
     state->had_error = true;
 
     va_list args;
+    va_start(args, msg);
 
-    va_start(args, format);
-    vfprintf(stderr, format, args);
-    va_end(args);
+    fprintf(stderr, "ERROR while parsing at [line %d]: ", line);
+    vfprintf(stderr, msg, args);
     fprintf(stderr, "\n");
+
+    va_end(args);
 }

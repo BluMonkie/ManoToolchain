@@ -77,6 +77,7 @@ typedef enum {
     STMT_EXPRESSION,
     STMT_BLOCK,
     STMT_IF,
+    STMT_WHILE,
     STMT_ASM,
 } StmtType;
 
@@ -99,6 +100,11 @@ typedef struct {
     Stmt *then_arm;
     Stmt *else_arm;
 } IfStmt;
+
+typedef struct {
+    Expr *condition;
+    Stmt *body;
+} WhileStmt;
 
 typedef struct {
     Token *asm;
@@ -125,6 +131,7 @@ struct Stmt {
         ExprStmt expr;
         BlockStmt block;
         IfStmt if_stmt;
+        WhileStmt while_stmt;
         AsmStmt asm;
     };
 };

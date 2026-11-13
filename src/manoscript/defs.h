@@ -30,7 +30,7 @@ typedef enum {
     TOKEN_IDENTIFIER, TOKEN_NUMBER,
     
     // Keywords
-    TOKEN_VAR, TOKEN_FUN, TOKEN_ASM, TOKEN_IF, TOKEN_ELSE,
+    TOKEN_VAR, TOKEN_FUN, TOKEN_ASM, TOKEN_IF, TOKEN_ELSE, TOKEN_WHILE,
     
     // Punctuation
     TOKEN_COMMA,
@@ -45,6 +45,7 @@ typedef enum {
 typedef struct {
     TokenType type;
     StringSlice lexeme;
+    int line;
     union {
         int64_t number;
     } data;
@@ -68,6 +69,8 @@ static inline const char *token_type_lexeme(TokenType type) {
         [TOKEN_GREATER]       = ">",
         [TOKEN_LESS_EQUAL]    = "<=",
         [TOKEN_GREATER_EQUAL] = ">=",
+        [TOKEN_LESS_LESS]     = "<<",
+        [TOKEN_GREATER_GREATER]= ">>",
         [TOKEN_COMMA]         = ",",
         [TOKEN_ARROW]         = "->",
 
@@ -81,6 +84,7 @@ static inline const char *token_type_lexeme(TokenType type) {
         [TOKEN_ASM]           = "asm",
         [TOKEN_IF]            = "if",
         [TOKEN_ELSE]          = "else",
+        [TOKEN_WHILE]         = "while",
         
         [TOKEN_COLON]         = ":",
         [TOKEN_SEMICOLON]     = ";",

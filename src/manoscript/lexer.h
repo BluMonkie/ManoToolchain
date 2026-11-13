@@ -9,6 +9,7 @@ typedef struct {
     size_t current;
     Vector tokens;
     bool had_error;
+    int line;
 } LexerState;
 
 LexerState lexer_new(const char *src);

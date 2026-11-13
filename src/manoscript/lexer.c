@@ -43,6 +43,7 @@ static const Keyword KEYWORDS[] = {
     {"asm", TOKEN_ASM},
     {"if", TOKEN_IF},
     {"else", TOKEN_ELSE},
+    {"while", TOKEN_WHILE},
 };
 
 LexerState lexer_new(const char *src) {
@@ -52,6 +53,7 @@ LexerState lexer_new(const char *src) {
         .current = 0,
         .tokens = vector_new(sizeof(Token)),
         .had_error = false,
+        .line = 0,
     };
 }
 
@@ -228,7 +230,9 @@ static void skip_single_comment(LexerState *state) {
 }
 
 static char advance(LexerState *state) {
-    return state->src[state->current++];
+    char c = state->src[state->current++];
+    if (c == '\n') state->line++;
+    return c;
 }
 
 static char peek(LexerState *state) {
@@ -264,6 +268,7 @@ static void add_token(LexerState *state, TokenType type) {
             .len = state->current - state->begin,
         },
         .type = type,
+        .line = state->line,
     };
 
     vector_push(&state->tokens, &token);
@@ -278,7 +283,8 @@ static void add_number_token(LexerState *state, TokenType type, int64_t number) 
         .type = type,
         .data = {
             .number = number,
-        }
+        },
+        .line = state->line,
     };
 
     vector_push(&state->tokens, &token);

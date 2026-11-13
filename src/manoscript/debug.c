@@ -30,6 +30,8 @@ static const char *const TOKEN_TYPE_NAMES[] = {
     [TOKEN_GREATER] = "TOKEN_GREATER",
     [TOKEN_LESS_EQUAL] = "TOKEN_LESS_EQUAL",
     [TOKEN_GREATER_EQUAL] = "TOKEN_GREATER_EQUAL",
+    [TOKEN_LESS_LESS] = "TOKEN_LESS_LESS",
+    [TOKEN_GREATER_GREATER] = "TOKEN_GREATER_GREATER",
 
     // Special operators
     [TOKEN_AT] = "TOKEN_AT",
@@ -44,6 +46,7 @@ static const char *const TOKEN_TYPE_NAMES[] = {
     [TOKEN_ASM] = "TOKEN_ASM",
     [TOKEN_IF] = "TOKEN_IF",
     [TOKEN_ELSE] = "TOKEN_ELSE",
+    [TOKEN_WHILE] = "TOKEN_WHILE",
 
     // Punctuation
     [TOKEN_COMMA] = "TOKEN_COMMA",
@@ -414,6 +417,36 @@ static void print_stmt(FILE *stream, Stmt *stmt, const char *prefix, bool last) 
                 snprintf(else_prefix, sizeof(else_prefix),
                     "%s    ", child_prefix);
                 print_stmt(stream, stmt->if_stmt.else_arm, else_prefix, true);
+            }
+            break;
+        }
+
+        case STMT_WHILE: {
+            snprintf(label, sizeof(label), "WhileStmt");
+            print_node(stream, prefix, last, label);
+
+            char child_prefix[1024];
+            snprintf(child_prefix, sizeof(child_prefix),
+                "%s%s", prefix, last ? "    " : "|   ");
+
+            print_node(stream, child_prefix, false, "Condition");
+            char cond_prefix[2048];
+            snprintf(cond_prefix, sizeof(cond_prefix),
+                "%s|   ", child_prefix);
+            print_expr(stream, stmt->while_stmt.condition, cond_prefix, true);
+
+            print_node(stream, child_prefix, true, "Body");
+            char body_prefix[2048];
+            snprintf(body_prefix, sizeof(body_prefix),
+                "%s    ", child_prefix);
+            if (stmt->while_stmt.body) {
+                Stmt body_stmt = {
+                    .type = STMT_BLOCK,
+                    .block = stmt->while_stmt.body->block,
+                };
+                print_stmt(stream, &body_stmt, body_prefix, true);
+            } else {
+                print_node(stream, body_prefix, true, "<null>");
             }
             break;
         }

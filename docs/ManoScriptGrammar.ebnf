@@ -4,10 +4,11 @@ decl = vardecl | fundecl;
 vardecl = "var" , IDENTIFIER , ":" , IDENTIFIER , [ "=" , expr] , ";" ;
 fundecl = "fun" , IDENTIFIER , "(" , [ IDENTIFIER , ":", IDENTIFIER ] , { "," , IDENTIFIER , ":", IDENTIFIER } , ")" , [ "->" , IDENTIFIER , ":" , IDENTIFIER ] , block ; 
 
-stmt = asm | block | if_stmt | expr_stmt ;
+stmt = asm | block | if_stmt | while_stmt | expr_stmt ;
 asm = "asm" , "{" , { ASM_INST } , "}" ;
 block = "{" , { stmt | vardecl } , "}" ;
 if_stmt = "if" , expr , block , [ "else" , ( block | if_stmt ) ] ;
+while_stmt = "while" , expr , block ;
 expr_stmt = expr , ";" ;
 
 expr = assignment ;

@@ -4,6 +4,7 @@
 #include "ast.h"
 #include "common/vector.h"
 #include "symbol_map.h"
+#include "intrinsics.h"
 
 typedef struct {
     Vector instructions;
@@ -11,6 +12,7 @@ typedef struct {
     SymbolMap symbols;
     Vector temporaries;
     Arena arena;
+    IntrinsicEntry intrinsics[INT_COUNT];
     int temp_depth;
     char *pending_label;
 } CodegenState;
