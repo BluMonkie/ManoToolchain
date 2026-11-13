@@ -39,6 +39,7 @@ typedef struct {
 
 static const Keyword KEYWORDS[] = {
     {"var", TOKEN_VAR},
+    {"fun", TOKEN_FUN},
     {"asm", TOKEN_ASM},
     {"if", TOKEN_IF},
     {"else", TOKEN_ELSE},
@@ -79,9 +80,6 @@ static void scan_token(LexerState *state) {
         case '+':
             add_token(state, TOKEN_PLUS);
             break;
-        case '-':
-            add_token(state, TOKEN_MINUS);
-            break;
         case '*':
             add_token(state, TOKEN_STAR);
             break;
@@ -98,6 +96,13 @@ static void scan_token(LexerState *state) {
         case '~':
             add_token(state, TOKEN_TILDE);
             break;
+        case '-':
+            if (match(state, '>')) {
+                add_token(state, TOKEN_ARROW);
+            } else {
+                add_token(state, TOKEN_MINUS);
+            }
+            break;
         case '=':
             if (match(state, '=')) {
                 add_token(state, TOKEN_EQUAL_EQUAL);
@@ -107,7 +112,7 @@ static void scan_token(LexerState *state) {
             break;
         case '!':
             if (match(state, '=')) {
-                add_token(state, TOKEN_PIPE_EQUAL);
+                add_token(state, TOKEN_BANG_EQUAL);
             }
             break;
         case '&':
@@ -139,6 +144,9 @@ static void scan_token(LexerState *state) {
             break;
         case '@':
             add_token(state, TOKEN_AT);
+            break;
+        case ',':
+            add_token(state, TOKEN_COMMA);
             break;
         case ':':
             add_token(state, TOKEN_COLON);

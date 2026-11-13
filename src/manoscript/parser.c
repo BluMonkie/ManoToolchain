@@ -11,6 +11,7 @@
 
 static Stmt parse_decl(ParserState *state);
 static Stmt parse_vardecl(ParserState *state);
+static Stmt parse_fundecl(ParserState *state);
 static Stmt parse_statement(ParserState *state);
 static Stmt parse_asm(ParserState *state);
 static Stmt parse_block(ParserState *state);
@@ -65,6 +66,8 @@ Program parse_program(ParserState *state) {
 static Stmt parse_decl(ParserState *state) {
     if (match(state, TOKEN_VAR)) {
         return parse_vardecl(state);
+    } else if (match(state, TOKEN_FUN)) {
+        return parse_fundecl(state);
     } else {
         return parse_statement(state);
     }
@@ -91,6 +94,50 @@ static Stmt parse_vardecl(ParserState *state) {
     };
     consume(state, TOKEN_SEMICOLON);
     return stmt;
+}
+
+static Stmt parse_fundecl(ParserState *state) {
+    FunDeclStmt stmt = {0};
+
+    stmt.identifier = consume(state, TOKEN_IDENTIFIER);
+    stmt.parameters = vector_new(sizeof(FunParameter));
+
+    consume(state, TOKEN_LEFT_PAREN);
+    while (!is_at_end(state) && !match(state, TOKEN_RIGHT_PAREN)) {
+        Token *id = consume(state, TOKEN_IDENTIFIER);
+        consume(state, TOKEN_COLON);
+        Token *type = consume(state, TOKEN_IDENTIFIER);
+        if (peek(state)->type != TOKEN_RIGHT_PAREN) {
+            consume(state, TOKEN_COMMA);
+        }
+        
+        FunParameter param = {
+            .identifier = id,
+            .type_identifier = type,
+        };
+        vector_push(&stmt.parameters, &param);
+    }
+
+    if (match(state, TOKEN_ARROW)) {
+        Token *id = consume(state, TOKEN_IDENTIFIER);
+        consume(state, TOKEN_COLON);
+        Token *type = consume(state, TOKEN_IDENTIFIER);
+
+        FunParameter param = {
+            .identifier = id,
+            .type_identifier = type,
+        };
+        stmt.output = arena_alloc_type(&state->arena, sizeof(param), &param);
+    }
+
+    consume(state, TOKEN_LEFT_BRACE);
+    Stmt body = parse_block(state);
+    stmt.body = arena_alloc_type(&state->arena, sizeof(BlockStmt), &body.block);
+
+    return (Stmt) {
+        .type = STMT_FUNDECL,
+        .fun_decl = stmt,
+    };
 }
 
 static Stmt parse_statement(ParserState *state) {
@@ -200,7 +247,7 @@ static Expr parse_assignment(ParserState *state) {
 static Expr parse_comparison(ParserState *state) {
     Expr expr = parse_bitwise_expr(state);
 
-    if (match(state, TOKEN_LESS) || match(state, TOKEN_GREATER) || match(state, TOKEN_EQUAL_EQUAL) || match(state, TOKEN_PIPE_EQUAL)) {
+    if (match(state, TOKEN_LESS) || match(state, TOKEN_GREATER) || match(state, TOKEN_LESS_EQUAL) || match(state, TOKEN_GREATER_EQUAL) || match(state, TOKEN_EQUAL_EQUAL) || match(state, TOKEN_BANG_EQUAL)) {
         Token *tok = previous(state);
         
         Expr right = parse_bitwise_expr(state);
@@ -312,10 +359,31 @@ static Expr parse_primary(ParserState *state) {
             }
         };
     } else if (match(state, TOKEN_IDENTIFIER)) {
-        return (Expr) {
+        Token *id = previous(state);
+
+        if (!match(state, TOKEN_LEFT_PAREN)) return (Expr) {
             .type = EXPR_IDENTIFIER,
             .identifier = {
-                .id = previous(state),
+                .id = id,
+            }
+        };
+
+        Vector arguments = vector_new(sizeof(Expr));
+
+        while (!is_at_end(state) && !match(state, TOKEN_RIGHT_PAREN)) {
+            Expr expr = parse_expr(state);
+            vector_push(&arguments, &expr);
+
+            if (peek(state)->type != TOKEN_RIGHT_PAREN) {
+                consume(state, TOKEN_COMMA);
+            }
+        }
+
+        return (Expr) {
+            .type = EXPR_CALL,
+            .call = {
+                .callee = id,
+                .arguments = arguments,
             }
         };
     } else if (match(state, TOKEN_NUMBER)) {

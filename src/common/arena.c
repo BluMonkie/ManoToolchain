@@ -52,7 +52,7 @@ void *arena_alloc(Arena *arena, size_t size) {
     return ((unsigned char *) chunk->buffer) + temp;
 }
 
-void *arena_alloc_type(Arena *arena, size_t size, void* data) {
+void *arena_alloc_type(Arena *arena, size_t size, const void* data) {
     void *ptr = arena_alloc(arena, size);
     memcpy(ptr, data, size);
     return ptr;

@@ -106,12 +106,12 @@ int main(int argc, char **argv) {
     if (options.output_file_path == NULL) {
         options.output_file_path = replace_or_add_extension(options.input_file_path, MS_FILE_EXTENSION, MANO_ASM_FILE_EXTENSION);
     }
-
+    
     if (options.output_file_path == NULL) {
         fprintf(stderr, "ERROR: Failed to allocate output path.\n");
         exit(EXIT_FAILURE);
     }
-
+    
     FILE *output_file = fopen(options.output_file_path, "w");
     if (output_file == NULL) {
         fprintf(stderr, "ERROR: Can't write to file %s.\n", options.output_file_path);

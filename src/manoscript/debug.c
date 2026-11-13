@@ -19,11 +19,17 @@ static const char *const TOKEN_TYPE_NAMES[] = {
     [TOKEN_CARET] = "TOKEN_CARET",
 
     // One or two characters
+    [TOKEN_ARROW] = "TOKEN_ARROW",
     [TOKEN_SLASH] = "TOKEN_SLASH",
     [TOKEN_EQUAL] = "TOKEN_EQUAL",
     [TOKEN_EQUAL_EQUAL] = "TOKEN_EQUAL_EQUAL",
+    [TOKEN_BANG_EQUAL] = "TOKEN_BANG_EQUAL",
     [TOKEN_AMP] = "TOKEN_AMP",
     [TOKEN_PIPE] = "TOKEN_PIPE",
+    [TOKEN_LESS] = "TOKEN_LESS",
+    [TOKEN_GREATER] = "TOKEN_GREATER",
+    [TOKEN_LESS_EQUAL] = "TOKEN_LESS_EQUAL",
+    [TOKEN_GREATER_EQUAL] = "TOKEN_GREATER_EQUAL",
 
     // Special operators
     [TOKEN_AT] = "TOKEN_AT",
@@ -34,11 +40,13 @@ static const char *const TOKEN_TYPE_NAMES[] = {
 
     // Keywords
     [TOKEN_VAR] = "TOKEN_VAR",
+    [TOKEN_FUN] = "TOKEN_FUN",
     [TOKEN_ASM] = "TOKEN_ASM",
     [TOKEN_IF] = "TOKEN_IF",
     [TOKEN_ELSE] = "TOKEN_ELSE",
 
     // Punctuation
+    [TOKEN_COMMA] = "TOKEN_COMMA",
     [TOKEN_COLON] = "TOKEN_COLON",
     [TOKEN_SEMICOLON] = "TOKEN_SEMICOLON",
     [TOKEN_LEFT_PAREN] = "TOKEN_LEFT_PAREN",
@@ -205,6 +213,29 @@ static void print_expr(FILE *stream, Expr *expr, const char *prefix, bool last) 
 
             print_node(stream, prefix, last, label);
             break;
+
+        case EXPR_CALL:
+            if (expr->call.callee) {
+                snprintf(label, sizeof(label), "Call: %.*s",
+                    (int)expr->call.callee->lexeme.len,
+                    expr->call.callee->lexeme.start);
+            } else {
+                snprintf(label, sizeof(label), "Call: <null>");
+            }
+
+            print_node(stream, prefix, last, label);
+
+            if (expr->call.arguments.size > 0) {
+                char child_prefix[1024];
+                snprintf(child_prefix, sizeof(child_prefix),
+                    "%s%s", prefix, last ? "    " : "|   ");
+
+                for (size_t i = 0; i < expr->call.arguments.size; i++) {
+                    Expr *arg = vector_at(&expr->call.arguments, i);
+                    print_expr(stream, arg, child_prefix, i == expr->call.arguments.size - 1);
+                }
+            }
+            break;
     }
 }
 
@@ -260,6 +291,72 @@ static void print_stmt(FILE *stream, Stmt *stmt, const char *prefix, bool last) 
 
                 print_expr(stream, stmt->var_decl.initializer,
                     init_prefix, true);
+            }
+
+            break;
+        }
+
+        case STMT_FUNDECL: {
+            snprintf(label, sizeof(label), "FunDecl");
+            print_node(stream, prefix, last, label);
+
+            char child_prefix[1024];
+            snprintf(child_prefix, sizeof(child_prefix),
+                "%s%s", prefix, last ? "    " : "|   ");
+
+            char value[256];
+            if (stmt->fun_decl.identifier) {
+                Token *id = stmt->fun_decl.identifier;
+                snprintf(value, sizeof(value),
+                    "Identifier: %.*s",
+                    (int)id->lexeme.len, id->lexeme.start);
+            } else {
+                snprintf(value, sizeof(value), "Identifier: <null>");
+            }
+            print_node(stream, child_prefix, false, value);
+
+            if (stmt->fun_decl.parameters.size > 0) {
+                print_node(stream, child_prefix, false, "Parameters");
+                char params_prefix[2048];
+                snprintf(params_prefix, sizeof(params_prefix), "%s|   ", child_prefix);
+
+                for (size_t i = 0; i < stmt->fun_decl.parameters.size; i++) {
+                    FunParameter *param = vector_at(&stmt->fun_decl.parameters, i);
+                    char p_buf[256];
+                    snprintf(p_buf, sizeof(p_buf), "%.*s: %.*s",
+                        param->identifier ? (int)param->identifier->lexeme.len : 6,
+                        param->identifier ? param->identifier->lexeme.start : "<null>",
+                        param->type_identifier ? (int)param->type_identifier->lexeme.len : 6,
+                        param->type_identifier ? param->type_identifier->lexeme.start : "<null>");
+                    print_node(stream, params_prefix, i == stmt->fun_decl.parameters.size - 1, p_buf);
+                }
+            }
+
+            if (stmt->fun_decl.output != NULL && stmt->fun_decl.output->identifier != NULL) {
+                print_node(stream, child_prefix, false, "Return");
+                char ret_prefix[2048];
+                snprintf(ret_prefix, sizeof(ret_prefix), "%s|   ", child_prefix);
+
+                char id_val[256], type_val[256];
+                snprintf(id_val, sizeof(id_val), "Identifier: %.*s",
+                    stmt->fun_decl.output->identifier ? (int)stmt->fun_decl.output->identifier->lexeme.len : 6,
+                    stmt->fun_decl.output->identifier ? stmt->fun_decl.output->identifier->lexeme.start : "<null>");
+                print_node(stream, ret_prefix, false, id_val);
+
+                snprintf(type_val, sizeof(type_val), "Type: %.*s",
+                    stmt->fun_decl.output->type_identifier ? (int)stmt->fun_decl.output->type_identifier->lexeme.len : 6,
+                    stmt->fun_decl.output->type_identifier ? stmt->fun_decl.output->type_identifier->lexeme.start : "<null>");
+                print_node(stream, ret_prefix, true, type_val);
+            }
+
+            if (stmt->fun_decl.body) {
+                Stmt body_stmt = {
+                    .type = STMT_BLOCK,
+                    .block = *stmt->fun_decl.body,
+                };
+                print_stmt(stream, &body_stmt, child_prefix, true);
+            } else {
+                print_node(stream, child_prefix, true, "Body: <null>");
             }
 
             break;

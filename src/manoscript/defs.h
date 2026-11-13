@@ -12,9 +12,10 @@ typedef struct {
 typedef enum {
     // Operators
     // Single character
-    TOKEN_PLUS, TOKEN_MINUS, TOKEN_STAR, TOKEN_PERCENT,
+    TOKEN_PLUS, TOKEN_STAR, TOKEN_PERCENT,
     TOKEN_TILDE, TOKEN_CARET,
     // One or two characters
+    TOKEN_MINUS, TOKEN_ARROW,
     TOKEN_SLASH,
     TOKEN_EQUAL, TOKEN_EQUAL_EQUAL, TOKEN_BANG_EQUAL,
     TOKEN_AMP, TOKEN_PIPE,
@@ -29,9 +30,10 @@ typedef enum {
     TOKEN_IDENTIFIER, TOKEN_NUMBER,
     
     // Keywords
-    TOKEN_VAR, TOKEN_ASM, TOKEN_IF, TOKEN_ELSE,
+    TOKEN_VAR, TOKEN_FUN, TOKEN_ASM, TOKEN_IF, TOKEN_ELSE,
     
     // Punctuation
+    TOKEN_COMMA,
     TOKEN_COLON, TOKEN_SEMICOLON,
     TOKEN_LEFT_PAREN, TOKEN_RIGHT_PAREN,
     TOKEN_LEFT_BRACE, TOKEN_RIGHT_BRACE,
@@ -58,9 +60,16 @@ static inline const char *token_type_lexeme(TokenType type) {
         [TOKEN_SLASH]         = "/",
         [TOKEN_EQUAL]         = "=",
         [TOKEN_EQUAL_EQUAL]   = "==",
+        [TOKEN_BANG_EQUAL]    = "!=",
         [TOKEN_AMP]           = "&",
         [TOKEN_PIPE]          = "|",
         [TOKEN_CARET]         = "^",
+        [TOKEN_LESS]          = "<",
+        [TOKEN_GREATER]       = ">",
+        [TOKEN_LESS_EQUAL]    = "<=",
+        [TOKEN_GREATER_EQUAL] = ">=",
+        [TOKEN_COMMA]         = ",",
+        [TOKEN_ARROW]         = "->",
 
         [TOKEN_AT]            = "@",
 
@@ -68,6 +77,7 @@ static inline const char *token_type_lexeme(TokenType type) {
         [TOKEN_NUMBER]        = "number",
 
         [TOKEN_VAR]           = "var",
+        [TOKEN_FUN]           = "fun",
         [TOKEN_ASM]           = "asm",
         [TOKEN_IF]            = "if",
         [TOKEN_ELSE]          = "else",

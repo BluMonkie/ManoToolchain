@@ -8,15 +8,21 @@
 #include "common/vector.h"
 #include "defs.h"
 
-typedef struct {
-    StringSlice var_name;
-    char *mangled;
-} VarPair;
+typedef enum {
+    SYMBOL_VAR,
+    SYMBOL_FUN,
+} SymbolType;
 
 typedef struct {
-    StringSlice var_name;
+    StringSlice sym_name;
+    char *mangled;
+    SymbolType type;
+} SymbolPair;
+
+typedef struct {
+    StringSlice sym_name;
     size_t index;
-} VarIndexPair;
+} SymbolIndexPair;
 
 typedef struct {
     int value;
@@ -32,27 +38,37 @@ typedef struct {
 
 typedef struct Scope {
     struct Scope *parent;
-    Vector vars;
+    Vector symbols;
 } Scope;
 
 typedef struct {
+    FunDeclStmt *fun;
     Scope *scope;
-    Vector var_map;
+} FunScopePair;
+
+typedef struct {
+    Scope *scope;
+    Vector symbol_map;
     Vector const_map;
     Vector label_map;
+    Vector functions;
+    Vector fun_scopes;
     Arena arena;
 } SymbolMap;
 
 SymbolMap symbol_map_new();
 void symbol_map_free(SymbolMap* map);
 
-bool symbol_define_var(SymbolMap *map, StringSlice str);
+bool symbol_define_symbol(SymbolMap *map, StringSlice str);
+bool symbol_define_function(SymbolMap *map, FunDeclStmt *fun);
 bool symbol_exists(SymbolMap *map, StringSlice str);
 bool symbol_exists_in_scope(SymbolMap *map, StringSlice str);
-const char *symbol_get_map_var(SymbolMap *map, StringSlice str);
+const char *symbol_get_map_symbol(SymbolMap *map, StringSlice str);
 const char *symbol_get_map_const(SymbolMap *map, int num);
+FunDeclStmt *symbol_get_function(SymbolMap *map, StringSlice str);
 const char *symbol_get_label(SymbolMap *map);
-const char *symbol_get_label_for_block(SymbolMap *map, Stmt *stmt, char *return_label);
+const char *symbol_get_label_for_block(SymbolMap *map, Stmt *stmt, const char *return_label);
 
 void symbol_push_scope(SymbolMap *map);
 void symbol_pop_scope(SymbolMap *map);
+void restore_fun_scope(SymbolMap *map, FunDeclStmt *fun);

@@ -11,6 +11,7 @@ typedef enum {
     EXPR_ASSIGNMENT,
     EXPR_IDENTIFIER,
     EXPR_LITERAL,
+    EXPR_CALL,
 } ExprType;
 
 typedef struct Expr Expr;
@@ -50,6 +51,11 @@ typedef struct {
     };
 } LiteralExpr;
 
+typedef struct {
+    Token *callee;
+    Vector arguments;
+} CallExpr;
+
 struct Expr {
     ExprType type;
     union {
@@ -59,6 +65,7 @@ struct Expr {
         IdentifierExpr identifier;
         LiteralExpr literal;
         AssignmentExpr assignment;
+        CallExpr call;
     };
 };
 
@@ -66,6 +73,7 @@ typedef struct Stmt Stmt;
 
 typedef enum {
     STMT_VARDECL,
+    STMT_FUNDECL,
     STMT_EXPRESSION,
     STMT_BLOCK,
     STMT_IF,
@@ -80,7 +88,7 @@ typedef struct {
 
 typedef struct {
     Expr *expr;
-} ExprStatement;
+} ExprStmt;
 
 typedef struct {
     Vector stmts;
@@ -96,11 +104,25 @@ typedef struct {
     Token *asm;
 } AsmStmt;
 
+typedef struct {
+    Token *identifier;
+    Token *type_identifier;
+    const char *mangled;
+} FunParameter;
+
+typedef struct {
+    Token *identifier;
+    Vector parameters;
+    FunParameter *output;
+    BlockStmt *body;
+} FunDeclStmt;
+
 struct Stmt {
     StmtType type;
     union {
         VarDeclStmt var_decl;
-        ExprStatement expr;
+        FunDeclStmt fun_decl;
+        ExprStmt expr;
         BlockStmt block;
         IfStmt if_stmt;
         AsmStmt asm;

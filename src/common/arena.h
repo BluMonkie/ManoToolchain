@@ -17,5 +17,5 @@ typedef struct {
 Arena arena_new();
 
 void *arena_alloc(Arena *arena, size_t size);
-void *arena_alloc_type(Arena *arena, size_t size, void* data);
+void *arena_alloc_type(Arena *arena, size_t size, const void* data);
 void arena_drop(Arena *arena);

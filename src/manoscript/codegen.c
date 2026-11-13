@@ -13,6 +13,7 @@
 
 static void emit_stmt_inst(CodegenState *state, Stmt *stmt);
 static void emit_var_decl_inst(CodegenState *state, VarDeclStmt *stmt);
+static void emit_fun_decl_inst(CodegenState *state, FunDeclStmt *stmt);
 static void emit_asm_inst(CodegenState *state, AsmStmt *stmt);
 static void emit_block_inst(CodegenState *state, BlockStmt *stmt);
 static void emit_if_inst(CodegenState *state, IfStmt *stmt);
@@ -28,17 +29,19 @@ static void emit_binary_xor_expr(CodegenState *state, BinaryExpr *expr, const ch
 static void emit_unary_expr(CodegenState *state, UnaryExpr *expr);
 static void emit_identifier_expr(CodegenState *state, IdentifierExpr *expr);
 static void emit_literal_expr(CodegenState *state, LiteralExpr *expr);
+static void emit_call_expr(CodegenState *state, CallExpr *expr);
 
 static void emit_data_section(CodegenState *state);
 static void emit_var_data_section(CodegenState *state);
 static void emit_const_data_section(CodegenState *state);
 static void emit_temp_data_section(CodegenState *state);
 static void emit_branches_section(CodegenState *state);
+static void emit_function_section(CodegenState *state);
 
 static void emit(CodegenState *state, ManoInst inst);
 
 static const char *get_next_temporary(CodegenState *state);
-static void pop_temporary(CodegenState *state);
+static const char *pop_temporary(CodegenState *state);
 
 static char get_base36_char(unsigned int i);
 static bool is_alphanumeric(char c);
@@ -75,8 +78,9 @@ void emit_instructions(CodegenState *state) {
     emit(state, (ManoInst) {
         .type = INST_REG_HLT,
     });
-    emit_data_section(state);
     emit_branches_section(state);
+    emit_function_section(state);
+    emit_data_section(state);
     emit(state, (ManoInst) { .type = INST_PSI_END });
 }
 
@@ -84,6 +88,9 @@ static void emit_stmt_inst(CodegenState *state, Stmt *stmt) {
     switch (stmt->type) {
         case STMT_VARDECL:
             emit_var_decl_inst(state, &stmt->var_decl);
+            break;
+        case STMT_FUNDECL:
+            emit_fun_decl_inst(state, &stmt->fun_decl);
             break;
         case STMT_EXPRESSION:
             emit_expr_inst(state, stmt->expr.expr);
@@ -102,14 +109,19 @@ static void emit_stmt_inst(CodegenState *state, Stmt *stmt) {
 
 static void emit_var_decl_inst(CodegenState *state, VarDeclStmt *stmt) {
     // TODO: Add check for if var is predefined
-    symbol_define_var(&state->symbols, stmt->identifier->lexeme);
+    symbol_define_symbol(&state->symbols, stmt->identifier->lexeme);
     if (stmt->initializer != nullptr) {
         emit_expr_inst(state, stmt->initializer);
         emit(state, (ManoInst) {
             .type = INST_MEM_STA,
-            .argument = symbol_get_map_var(&state->symbols, stmt->identifier->lexeme),
+            .argument = symbol_get_map_symbol(&state->symbols, stmt->identifier->lexeme),
         });
     }
+}
+
+static void emit_fun_decl_inst(CodegenState *state, FunDeclStmt *stmt) {
+    // TODO: Check if symbol is available
+    symbol_define_function(&state->symbols, stmt);
 }
 
 static void emit_block_inst(CodegenState *state, BlockStmt *stmt) {
@@ -124,9 +136,9 @@ static void emit_if_inst(CodegenState *state, IfStmt *stmt) {
         .type = INST_REG_SZA,
     });
 
-    char *lreturn = symbol_get_label(&state->symbols);
-    char *lthen = symbol_get_label_for_block(&state->symbols, stmt->then_arm, lreturn);
-    char *lelse = symbol_get_label_for_block(&state->symbols, stmt->else_arm, lreturn);
+    const char *lreturn = symbol_get_label(&state->symbols);
+    const char *lthen = symbol_get_label_for_block(&state->symbols, stmt->then_arm, lreturn);
+    const char *lelse = symbol_get_label_for_block(&state->symbols, stmt->else_arm, lreturn);
 
     emit(state, (ManoInst) {
         .type = INST_MEM_BUN,
@@ -160,7 +172,7 @@ static void emit_asm_inst(CodegenState *state, AsmStmt *stmt) {
 
             while (c < end && is_alphanumeric(*c)) c++;
 
-            const char *substitute = symbol_get_map_var(&state->symbols, (StringSlice) {
+            const char *substitute = symbol_get_map_symbol(&state->symbols, (StringSlice) {
                 .start = begin,
                 .len = c - begin,
             });
@@ -213,6 +225,9 @@ static void emit_expr_inst(CodegenState *state, Expr *expr) {
         case EXPR_UNARY:
             emit_unary_expr(state, &expr->unary);
             break;
+        case EXPR_CALL:
+            emit_call_expr(state, &expr->call);
+            break;
     }
 }
 
@@ -221,7 +236,7 @@ static void emit_assignment_expr(CodegenState *state, AssignmentExpr *expr) {
     emit_expr_inst(state, expr->value);
     emit(state, (ManoInst) {
         .type = INST_MEM_STA,
-        .argument = symbol_get_map_var(&state->symbols, expr->id->lexeme),
+        .argument = symbol_get_map_symbol(&state->symbols, expr->id->lexeme),
     });
 }
 
@@ -425,7 +440,7 @@ static void emit_unary_expr(CodegenState *state, UnaryExpr *expr) {
 }
 
 static void emit_identifier_expr(CodegenState *state, IdentifierExpr *expr) {
-    const char *label = symbol_get_map_var(&state->symbols, expr->id->lexeme);
+    const char *label = symbol_get_map_symbol(&state->symbols, expr->id->lexeme);
     emit(state, (ManoInst) {
         .type = INST_MEM_LDA,
         .argument = label,
@@ -440,6 +455,42 @@ static void emit_literal_expr(CodegenState *state, LiteralExpr *expr) {
     });
 }
 
+static void emit_call_expr(CodegenState *state, CallExpr *expr) {
+    // TODO: Verify the function actually exists and parameter count
+    FunDeclStmt *fun = symbol_get_function(&state->symbols, expr->callee->lexeme);
+    assert(expr->arguments.size == fun->parameters.size);
+
+    for (size_t i = 0; i < expr->arguments.size; i++) {
+        Expr *arg = vector_at(&expr->arguments, i);
+        FunParameter *param = vector_at(&fun->parameters, i);
+
+        
+        emit_expr_inst(state, arg);
+        emit(state, (ManoInst) {
+            .type = INST_MEM_STA,
+            .argument = get_next_temporary(state),
+        });
+    }
+
+    for (size_t i = fun->parameters.size; i > 0; i--) {
+        FunParameter *param = vector_at(&fun->parameters, i - 1);
+
+        emit(state, (ManoInst) {
+            .type = INST_MEM_LDA,
+            .argument = pop_temporary(state),  
+        });
+        emit(state, (ManoInst) {
+            .type = INST_MEM_STA,
+            .argument = param->mangled,
+        });
+    }
+
+    emit(state, (ManoInst) {
+        .type = INST_MEM_BSA,
+        .argument = symbol_get_map_symbol(&state->symbols, fun->identifier->lexeme),
+    });
+}
+
 static void emit_data_section(CodegenState *state) {
     emit_var_data_section(state);
     emit_const_data_section(state);
@@ -447,8 +498,9 @@ static void emit_data_section(CodegenState *state) {
 }
 
 static void emit_var_data_section(CodegenState *state) {
-    for (size_t i = 0; i < state->symbols.var_map.size; i++) {
-        VarPair *pair = vector_at(&state->symbols.var_map, i);
+    for (size_t i = 0; i < state->symbols.symbol_map.size; i++) {
+        SymbolPair *pair = vector_at(&state->symbols.symbol_map, i);
+        if (pair->type != SYMBOL_VAR) continue;
 
         emit(state, (ManoInst) {
             .type = INST_PSI_DEC,
@@ -500,12 +552,39 @@ static void emit_branches_section(CodegenState *state) {
     }
 }
 
+static void emit_function_section(CodegenState *state) {
+    for (size_t i = 0; i < state->symbols.functions.size; i++) {
+        FunDeclStmt *fun = vector_at(&state->symbols.functions, i);
+        const char *label = symbol_get_map_symbol(&state->symbols, fun->identifier->lexeme);
+        restore_fun_scope(&state->symbols, fun);
+
+        emit(state, (ManoInst) {
+            .type = INST_PSI_HEX,
+            .label = label,
+            .argument = "0",
+        });
+        emit_block_inst(state, fun->body);
+        if (fun->output != nullptr) {
+            emit(state, (ManoInst) {
+                .type = INST_MEM_LDA,
+                .argument = fun->output->mangled,
+            });
+        }
+        emit(state, (ManoInst) {
+            .type = INST_MEM_BUN,
+            .argument = label,
+            .indirect = true,
+        });
+        symbol_pop_scope(&state->symbols);
+    }
+}
+
 static const char *get_next_temporary(CodegenState *state) {
     size_t slot = state->temp_depth++;
     if (slot < state->temporaries.size) {
         return vector_at(&state->temporaries, slot);
     }
-
+    
     char label[4];
     label[0] = 't';
     label[1] = get_base36_char(slot / 36);
@@ -516,9 +595,9 @@ static const char *get_next_temporary(CodegenState *state) {
     return vector_at(&state->temporaries, state->temporaries.size - 1);
 }
 
-static void pop_temporary(CodegenState *state) {
-    if (state->temp_depth == 0) return;
-    state->temp_depth--;
+static const char *pop_temporary(CodegenState *state) {
+    if (state->temp_depth == 0) return nullptr;
+    return vector_at(&state->temporaries, --state->temp_depth);
 }
 
 static void emit(CodegenState *state, ManoInst inst) {

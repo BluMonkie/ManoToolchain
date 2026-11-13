@@ -1,7 +1,8 @@
 program = { decl | stmt } ;
 
-decl = vardecl ;
+decl = vardecl | fundecl;
 vardecl = "var" , IDENTIFIER , ":" , IDENTIFIER , [ "=" , expr] , ";" ;
+fundecl = "fun" , IDENTIFIER , "(" , [ IDENTIFIER , ":", IDENTIFIER ] , { "," , IDENTIFIER , ":", IDENTIFIER } , ")" , [ "->" , IDENTIFIER , ":" , IDENTIFIER ] , block ; 
 
 stmt = asm | block | if_stmt | expr_stmt ;
 asm = "asm" , "{" , { ASM_INST } , "}" ;
@@ -16,4 +17,4 @@ bitwise = shift , { ( "|" | "&" | "^" ) , shift } ;
 shift = term , { ( "<<" | ">>" ) , term } ;
 term = unary , { ( "+" | "-" ) , unary } ;
 unary = ( "+" | "-" | "~" ) , unary | primary;
-primary = "(" , expr , ")" | LITERAL | IDENTIFIER ;
+primary = "(" , expr , ")" | LITERAL | IDENTIFIER | IDENTIFIER , "(" , [ expr ] , { "," , expr } , ")";
