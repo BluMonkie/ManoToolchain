@@ -30,6 +30,7 @@ static void emit_binary_and_expr(CodegenState *state, BinaryExpr *expr, const ch
 static void emit_binary_or_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
 static void emit_binary_xor_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
 static void emit_binary_comp_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
+static void emit_binary_shift_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
 static void emit_unary_expr(CodegenState *state, UnaryExpr *expr);
 static void emit_identifier_expr(CodegenState *state, IdentifierExpr *expr);
 static void emit_literal_expr(CodegenState *state, LiteralExpr *expr);
@@ -296,6 +297,10 @@ static void emit_binary_expr(CodegenState *state, BinaryExpr *expr) {
         case TOKEN_BANG_EQUAL:
             emit_binary_comp_expr(state, expr, temp);
             break;
+        case TOKEN_LESS_LESS:
+        case TOKEN_GREATER_GREATER:
+            emit_binary_shift_expr(state, expr, temp);
+            break;
         default:
             assert(0 && "unreachable code");
     }
@@ -459,6 +464,46 @@ static void emit_binary_comp_expr(CodegenState *state, BinaryExpr *expr, const c
         .type = INST_MEM_BSA,
         .argument = jmp_label,
     });
+}
+
+static void emit_binary_shift_expr(CodegenState *state, BinaryExpr *expr, const char *temp) {
+    Intrinsic intr;
+    switch (expr->op->type) {
+        case TOKEN_LESS_LESS:
+            intr = INT_BIT_LSH;
+            break;
+        case TOKEN_GREATER_GREATER:
+            intr = INT_BIT_RSH;
+            break;
+        default:
+            assert(0 && "Unreachable code");
+    }
+
+    const char *label = enable_intrinsic(state, intr);
+
+    const char *slot = get_intrinsic_arg(state, intr);
+    const char *t1 = get_next_temporary(state);
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = t1,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_LDA,
+        .argument = temp,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = slot,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_LDA,
+        .argument = t1,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_BSA,
+        .argument = label,
+    });
+    pop_temporary(state);
 }
 
 static void emit_unary_expr(CodegenState *state, UnaryExpr *expr) {
@@ -643,7 +688,7 @@ static const char *pop_temporary(CodegenState *state) {
 static void emit(CodegenState *state, ManoInst inst) {
     if (state->pending_label != nullptr) {
         assert(inst.label == nullptr && "Pending label collided with explicit instruction label!");
-        
+
         inst.label = state->pending_label;
         state->pending_label = nullptr;
     }
