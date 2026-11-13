@@ -14,7 +14,7 @@ typedef struct {
     Arena arena;
     IntrinsicEntry intrinsics[INT_COUNT];
     int temp_depth;
-    char *pending_label;
+    const char *pending_label;
 } CodegenState;
 
 CodegenState codegen_new(Program *program);

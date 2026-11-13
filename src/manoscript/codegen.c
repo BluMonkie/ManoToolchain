@@ -158,20 +158,14 @@ static void emit_if_inst(CodegenState *state, IfStmt *stmt) {
             .argument = lelse,
         });
     }
-    emit(state, (ManoInst) {
-        .type = INST_REG_CLA,
-        .label = lreturn,
-    });
+    state->pending_label = lreturn;
 }
 
 static void emit_while_inst(CodegenState *state, WhileStmt *stmt) {
     const char *lreturn = symbol_get_label(&state->symbols);
     const char *lloop = symbol_get_label_for_block(&state->symbols, stmt->body, lreturn);
     
-    emit(state, (ManoInst) {
-        .type = INST_REG_CLA,
-        .label = lreturn,
-    });
+    state->pending_label = lreturn;
     emit_expr_inst(state, stmt->condition);
     emit(state, (ManoInst) {
         .type = INST_REG_SZA,
@@ -513,9 +507,7 @@ static void emit_call_expr(CodegenState *state, CallExpr *expr) {
 
     for (size_t i = 0; i < expr->arguments.size; i++) {
         Expr *arg = vector_at(&expr->arguments, i);
-        FunParameter *param = vector_at(&fun->parameters, i);
 
-        
         emit_expr_inst(state, arg);
         emit(state, (ManoInst) {
             .type = INST_MEM_STA,
@@ -591,10 +583,7 @@ static void emit_branches_section(CodegenState *state) {
         LabelPair *pair = vector_at(&state->symbols.label_map, i);
         if (pair->stmt == nullptr) continue;
 
-        emit(state, (ManoInst) {
-            .type = INST_REG_CLA,
-            .label = pair->label,
-        });
+        state->pending_label = pair->label;
         emit_stmt_inst(state, pair->stmt);
         emit(state, (ManoInst) {
             .type = INST_MEM_BUN,
@@ -652,6 +641,12 @@ static const char *pop_temporary(CodegenState *state) {
 }
 
 static void emit(CodegenState *state, ManoInst inst) {
+    if (state->pending_label != nullptr) {
+        assert(inst.label == nullptr && "Pending label collided with explicit instruction label!");
+        
+        inst.label = state->pending_label;
+        state->pending_label = nullptr;
+    }
     vector_push(&state->instructions, &inst);
 }
 
