@@ -650,16 +650,75 @@ static void emit_arth_div(CodegenState *state, const char *label) {
     const char *rem_l = symbol_get_label(&state->symbols);
     const char *div_l = symbol_get_label(&state->symbols);
     const char *count_l = symbol_get_label(&state->symbols);
+    const char *sign_l = symbol_get_label(&state->symbols);
     
     const char *loop_l = symbol_get_label(&state->symbols);
     const char *sub_l = symbol_get_label(&state->symbols);
     const char *sub_end_l = symbol_get_label(&state->symbols);
+    const char *arg_neg_l = symbol_get_label(&state->symbols);
+    const char *arg_neg_end_l = symbol_get_label(&state->symbols);
+    const char *div_not_neg_l = symbol_get_label(&state->symbols);
+    const char *div_neg_end_l = symbol_get_label(&state->symbols);
+    const char *ret_pos_l = symbol_get_label(&state->symbols);
 
     // Prologue
     emit(state, (ManoInst) {
         .type = INST_PSI_HEX,
         .argument = "0",
         .label = label,
+    });
+    emit(state, (ManoInst) { // Check if divisor is negative
+        .type = INST_REG_SNA,
+    });
+    emit(state, (ManoInst) { 
+        .type = INST_MEM_BUN,
+        .argument = div_not_neg_l,
+    });
+
+    emit(state, (ManoInst) { // Divisor is negative, flip sign flag
+        .type = INST_MEM_STA,
+        .argument = div_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_LDA,
+        .argument = sign_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_CMA,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = sign_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_BUN,
+        .argument = div_neg_end_l,
+    });
+
+    emit(state, (ManoInst) { // Divisor is not negative, negate it
+        .type = INST_REG_CMA,
+        .label = div_not_neg_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_INC,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = div_l,
+    });
+    
+    emit(state, (ManoInst) { // Check if dividend is negative
+        .type = INST_MEM_LDA,
+        .argument = arg,
+        .label = div_neg_end_l,
+    });
+
+    emit(state, (ManoInst) {
+        .type = INST_REG_SNA,
+    });
+    emit(state, (ManoInst) { // Dividend is not negative, skip
+        .type = INST_MEM_BUN,
+        .argument = arg_neg_end_l,
     });
     emit(state, (ManoInst) {
         .type = INST_REG_CMA,
@@ -669,10 +728,23 @@ static void emit_arth_div(CodegenState *state, const char *label) {
     });
     emit(state, (ManoInst) {
         .type = INST_MEM_STA,
-        .argument = div_l,
+        .argument = arg,
+    });
+    emit(state, (ManoInst) { // Dividend is negative, flip sign flag
+        .type = INST_MEM_LDA,
+        .argument = sign_l,
     });
     emit(state, (ManoInst) {
+        .type = INST_REG_CMA,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = sign_l,
+    });
+
+    emit(state, (ManoInst) {
         .type = INST_REG_CLA,
+        .label = arg_neg_end_l,
     });
     emit(state, (ManoInst) {
         .type = INST_MEM_STA,
@@ -758,7 +830,43 @@ static void emit_arth_div(CodegenState *state, const char *label) {
     // Epilogue
     emit(state, (ManoInst) {
         .type = INST_MEM_LDA,
+        .argument = sign_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_SNA,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_BUN,
+        .argument = ret_pos_l,
+    });
+
+    emit(state, (ManoInst) { // sign negative, reset it
+        .type = INST_REG_CLA,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = sign_l,
+    });
+    emit(state, (ManoInst) { // negate the qoutient
+        .type = INST_MEM_LDA,
         .argument = arg,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_CMA,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_INC,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_BUN,
+        .argument = label,
+        .indirect = true,
+    });
+
+    emit(state, (ManoInst) { // return as is
+        .type = INST_MEM_LDA,
+        .argument = arg,
+        .label = ret_pos_l,
     });
     emit(state, (ManoInst) {
         .type = INST_MEM_BUN,
@@ -786,6 +894,11 @@ static void emit_arth_div(CodegenState *state, const char *label) {
         .type = INST_PSI_HEX,
         .argument = "0",
         .label = count_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_PSI_HEX,
+        .argument = "0",
+        .label = sign_l,
     });
 }
 
