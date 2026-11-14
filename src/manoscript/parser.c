@@ -378,7 +378,7 @@ static Expr parse_term(ParserState *state) {
 static Expr parse_factor(ParserState *state) {
     Expr expr = parse_unary(state);
 
-    while (match(state, TOKEN_STAR) || match(state, TOKEN_SLASH)) {
+    while (match(state, TOKEN_STAR) || match(state, TOKEN_SLASH) || match(state, TOKEN_PERCENT)) {
         Token *tok = previous(state);
         
         Expr right = parse_unary(state);

@@ -17,7 +17,7 @@ comparison = bitwise , [ ( "<" | "<=" | ">" | ">=" | "==" | "!=" ) , bitwise ] ;
 bitwise = shift , { ( "|" | "&" | "^" ) , shift } ;
 shift = term , { ( "<<" | ">>" ) , term } ;
 term = factor , { ( "+" | "-" ) , factor } ;
-factor = unary , { ( "*" | "/" ) , unary } ;
+factor = unary , { ( "*" | "/" | "%") , unary } ;
 unary = ( "+" | "-" | "~" ) , unary | primary;
 primary = "(" , expr , ")" | LITERAL | IDENTIFIER | "@" , IDENTIFIER | call | "@" , call ;
 call = IDENTIFIER , "(" , [ expr , { "," , expr } ] , ")" ;

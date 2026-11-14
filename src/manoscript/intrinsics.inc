@@ -19,6 +19,10 @@ const char *enable_intrinsic(CodegenState *state, Intrinsic intr) {
     entry->enabled = true;
     entry->intr = intr;
 
+    if (intr == INT_ARTH_REM) {
+        enable_intrinsic(state, INT_ARTH_DIV);
+    }
+
     return entry->label;
 }
 
@@ -651,6 +655,7 @@ static void emit_arth_div(CodegenState *state, const char *label) {
     const char *div_l = symbol_get_label(&state->symbols);
     const char *count_l = symbol_get_label(&state->symbols);
     const char *sign_l = symbol_get_label(&state->symbols);
+    const char *rem_neg_l = symbol_get_label(&state->symbols);
     
     const char *loop_l = symbol_get_label(&state->symbols);
     const char *sub_l = symbol_get_label(&state->symbols);
@@ -659,6 +664,10 @@ static void emit_arth_div(CodegenState *state, const char *label) {
     const char *div_not_neg_l = symbol_get_label(&state->symbols);
     const char *div_neg_end_l = symbol_get_label(&state->symbols);
     const char *ret_pos_l = symbol_get_label(&state->symbols);
+    const char *rem_not_neg_l = symbol_get_label(&state->symbols);
+    
+    // save remainder label for remainder intrinsic
+    state->intrinsics[INT_ARTH_DIV].rem_label = rem_l;
 
     // Prologue
     emit(state, (ManoInst) {
@@ -729,7 +738,7 @@ static void emit_arth_div(CodegenState *state, const char *label) {
         .type = INST_MEM_STA,
         .argument = arg,
     });
-    emit(state, (ManoInst) { // Dividend is negative, flip sign flag
+    emit(state, (ManoInst) { // Dividend is negative, flip sign flag, and set rem neg to 1 (true)
         .type = INST_MEM_LDA,
         .argument = sign_l,
     });
@@ -739,6 +748,10 @@ static void emit_arth_div(CodegenState *state, const char *label) {
     emit(state, (ManoInst) {
         .type = INST_MEM_STA,
         .argument = sign_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_ISZ,
+        .argument = rem_neg_l,
     });
 
     emit(state, (ManoInst) {
@@ -829,7 +842,40 @@ static void emit_arth_div(CodegenState *state, const char *label) {
     // Epilogue
     emit(state, (ManoInst) {
         .type = INST_MEM_LDA,
+        .argument = rem_neg_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_SPA,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_BUN,
+        .argument = rem_not_neg_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_CLA,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = rem_neg_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_LDA,
+        .argument = rem_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_CMA,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_INC,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = rem_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_LDA,
         .argument = sign_l,
+        .label = rem_not_neg_l,
     });
     emit(state, (ManoInst) {
         .type = INST_REG_SNA,
@@ -899,6 +945,35 @@ static void emit_arth_div(CodegenState *state, const char *label) {
         .argument = "0",
         .label = sign_l,
     });
+    emit(state, (ManoInst) {
+        .type = INST_PSI_HEX,
+        .argument = "0",
+        .label = rem_neg_l,
+    });
+}
+
+static void emit_arth_rem(CodegenState *state, const char *label) {
+    const char *div_l = enable_intrinsic(state, INT_ARTH_DIV);
+    const char *rem_l = state->intrinsics[INT_ARTH_DIV].rem_label;
+
+    emit(state, (ManoInst) {
+        .type = INST_PSI_HEX,
+        .argument = "0",
+        .label = label,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_BSA,
+        .argument = div_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_LDA,
+        .argument = rem_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_BUN,
+        .argument = label,
+        .indirect = true,
+    });
 }
 
 const IntrinsicEmitter emitters[] = {
@@ -914,6 +989,7 @@ const IntrinsicEmitter emitters[] = {
     [INT_BIT_XOR] = emit_bit_xor,
     [INT_ARTH_MUL] = emit_arth_mul,
     [INT_ARTH_DIV] = emit_arth_div,
+    [INT_ARTH_REM] = emit_arth_rem,
 };
 
 static void emit_intrinsics(CodegenState *state) {
@@ -926,6 +1002,9 @@ static void emit_intrinsics(CodegenState *state) {
 }
 
 static const char *get_intrinsic_arg(CodegenState *state, Intrinsic intr) {
+    if (intr == INT_ARTH_REM) {
+        return get_intrinsic_arg(state, INT_ARTH_DIV); // Share the dividend slot!
+    }
     const char **label = &state->intrinsics[intr].arg_label;
     if (*label == nullptr) {
         *label = symbol_get_label(&state->symbols);

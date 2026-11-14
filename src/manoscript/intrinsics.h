@@ -13,6 +13,7 @@ typedef enum {
     INT_BIT_XOR,
     INT_ARTH_MUL,
     INT_ARTH_DIV,
+    INT_ARTH_REM,
     INT_COUNT,
 } Intrinsic;
 
@@ -21,4 +22,5 @@ typedef struct {
     Intrinsic intr;
     const char *label;
     const char *arg_label;
+    const char *rem_label; // Used only by / and % operators
 } IntrinsicEntry;

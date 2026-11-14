@@ -301,6 +301,7 @@ static void emit_binary_expr(CodegenState *state, BinaryExpr *expr) {
             break;
         case TOKEN_STAR:
         case TOKEN_SLASH:
+        case TOKEN_PERCENT:
         case TOKEN_LESS_LESS:
         case TOKEN_GREATER_GREATER:
         case TOKEN_CARET:
@@ -393,6 +394,9 @@ static void emit_binary_arg_intr_expr(CodegenState *state, BinaryExpr *expr, con
             break;
         case TOKEN_SLASH:
             intr = INT_ARTH_DIV;
+            break;
+        case TOKEN_PERCENT:
+            intr = INT_ARTH_REM;
             break;
         case TOKEN_LESS_LESS:
             intr = INT_BIT_LSH;
