@@ -12,6 +12,7 @@ typedef enum {
     INT_BIT_OR,
     INT_BIT_XOR,
     INT_ARTH_MUL,
+    INT_ARTH_DIV,
     INT_COUNT,
 } Intrinsic;
 

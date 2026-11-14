@@ -644,6 +644,151 @@ static void emit_arth_mul(CodegenState *state, const char *label) {
     });
 }
 
+static void emit_arth_div(CodegenState *state, const char *label) {
+    const char *arg = get_intrinsic_arg(state, INT_ARTH_DIV);
+    const char *count_c = symbol_get_map_const(&state->symbols, -16);
+    const char *rem_l = symbol_get_label(&state->symbols);
+    const char *div_l = symbol_get_label(&state->symbols);
+    const char *count_l = symbol_get_label(&state->symbols);
+    
+    const char *loop_l = symbol_get_label(&state->symbols);
+    const char *sub_l = symbol_get_label(&state->symbols);
+    const char *sub_end_l = symbol_get_label(&state->symbols);
+
+    // Prologue
+    emit(state, (ManoInst) {
+        .type = INST_PSI_HEX,
+        .argument = "0",
+        .label = label,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_CMA,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_INC,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = div_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_CLA,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = rem_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_LDA,
+        .argument = count_c,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = count_l,
+    });
+    // Loop
+    emit(state, (ManoInst) {
+        .type = INST_REG_CLE,
+        .label = loop_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_LDA,
+        .argument = arg,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_CIL,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = arg,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_LDA,
+        .argument = rem_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_CIL,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = rem_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_ADD,
+        .argument = div_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_SZE,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_BUN,
+        .argument = sub_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_BUN,
+        .argument = sub_end_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = rem_l,
+        .label = sub_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_LDA,
+        .argument = arg,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_INC,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = arg,
+    });
+    // Loop condition
+    emit(state, (ManoInst) {
+        .type = INST_MEM_ISZ,
+        .argument = count_l,
+        .label = sub_end_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_BUN,
+        .argument = loop_l,
+    });
+    
+    // Epilogue
+    emit(state, (ManoInst) {
+        .type = INST_MEM_LDA,
+        .argument = arg,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_BUN,
+        .argument = label,
+        .indirect = true,
+    });
+
+    // Data section
+    emit(state, (ManoInst) {
+        .type = INST_PSI_HEX,
+        .argument = "0",
+        .label = arg,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_PSI_HEX,
+        .argument = "0",
+        .label = rem_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_PSI_HEX,
+        .argument = "0",
+        .label = div_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_PSI_HEX,
+        .argument = "0",
+        .label = count_l,
+    });
+}
+
 const IntrinsicEmitter emitters[] = {
     [INT_CMP_LS] = emit_cmp_ls,
     [INT_CMP_GR] = emit_cmp_gr,
@@ -656,6 +801,7 @@ const IntrinsicEmitter emitters[] = {
     [INT_BIT_OR] = emit_bit_or,
     [INT_BIT_XOR] = emit_bit_xor,
     [INT_ARTH_MUL] = emit_arth_mul,
+    [INT_ARTH_DIV] = emit_arth_div,
 };
 
 static void emit_intrinsics(CodegenState *state) {

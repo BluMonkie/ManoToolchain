@@ -291,9 +291,10 @@ static void emit_binary_expr(CodegenState *state, BinaryExpr *expr) {
         case TOKEN_BANG_EQUAL:
             emit_binary_comp_expr(state, expr, temp);
             break;
+        case TOKEN_STAR:
+        case TOKEN_SLASH:
         case TOKEN_LESS_LESS:
         case TOKEN_GREATER_GREATER:
-        case TOKEN_STAR:
         case TOKEN_CARET:
         case TOKEN_PIPE:
             emit_binary_arg_intr_expr(state, expr, temp);
@@ -409,14 +410,17 @@ static void emit_binary_comp_expr(CodegenState *state, BinaryExpr *expr, const c
 static void emit_binary_arg_intr_expr(CodegenState *state, BinaryExpr *expr, const char *temp) {
     Intrinsic intr;
     switch (expr->op->type) {
+        case TOKEN_STAR:
+            intr = INT_ARTH_MUL;
+            break;
+        case TOKEN_SLASH:
+            intr = INT_ARTH_DIV;
+            break;
         case TOKEN_LESS_LESS:
             intr = INT_BIT_LSH;
             break;
         case TOKEN_GREATER_GREATER:
             intr = INT_BIT_RSH;
-            break;
-        case TOKEN_STAR:
-            intr = INT_ARTH_MUL;
             break;
         case TOKEN_PIPE:
             intr = INT_BIT_OR;
