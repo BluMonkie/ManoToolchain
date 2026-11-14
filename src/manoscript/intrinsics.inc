@@ -392,7 +392,135 @@ static void emit_bit_rsh(CodegenState *state, const char *label) {
     });
 }
 
-void emit_arth_mul(CodegenState *state, const char *label) {
+static void emit_bit_xor(CodegenState *state, const char *label) {
+    const char *arg = get_intrinsic_arg(state, INT_BIT_XOR);
+    const char *l1 = symbol_get_label(&state->symbols);
+    const char *l2 = symbol_get_label(&state->symbols);
+
+    emit(state, (ManoInst) {
+        .type = INST_PSI_HEX,
+        .argument = "0",
+        .label = label,
+    });
+    // Preserve B
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = l1,
+    });
+
+    // Compute ~(A & ~B)
+    emit(state, (ManoInst) {
+        .type = INST_REG_CMA,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_AND,
+        .argument = arg,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_CMA,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = l2,
+    });
+    
+    // Compute ~(~A & B)
+    emit(state, (ManoInst) {
+        .type = INST_MEM_LDA,
+        .argument = arg,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_CMA,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_AND,
+        .argument = l1,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_CMA,
+    });
+    
+    // Compute ~(A & ~B) & ~(~A & B)
+    emit(state, (ManoInst) {
+        .type = INST_MEM_AND,
+        .argument = l2,
+    });
+
+    // Compute ~(~(A & ~B) & ~(~A & B)) = A ^ B
+    emit(state, (ManoInst) {
+        .type = INST_REG_CMA,
+    });
+
+    emit(state, (ManoInst) {
+        .type = INST_MEM_BUN,
+        .argument = label,
+        .indirect = true,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_PSI_HEX,
+        .argument = "0",
+        .label = arg,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_PSI_HEX,
+        .argument = "0",
+        .label = l1,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_PSI_HEX,
+        .argument = "0",
+        .label = l2,
+    });
+}
+
+static void emit_bit_or(CodegenState *state, const char *label) {
+    const char *arg = get_intrinsic_arg(state, INT_BIT_OR);
+    const char *l1 = symbol_get_label(&state->symbols);
+    
+    emit(state, (ManoInst) {
+        .type = INST_PSI_HEX,
+        .argument = "0",
+        .label = label,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_CMA,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = l1,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_LDA,
+        .argument = arg,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_CMA,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_AND,
+        .argument = l1,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_CMA,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_BUN,
+        .argument = label,
+        .indirect = true,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_PSI_HEX,
+        .argument = "0",
+        .label = arg,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_PSI_HEX,
+        .argument = "0",
+        .label = l1,
+    });
+}
+
+static void emit_arth_mul(CodegenState *state, const char *label) {
     const char *count_c = symbol_get_map_const(&state->symbols, -16);
     const char *arg = get_intrinsic_arg(state, INT_ARTH_MUL);
     const char *prod_l = symbol_get_label(&state->symbols);
@@ -525,6 +653,8 @@ const IntrinsicEmitter emitters[] = {
     [INT_CMP_NEQ] = emit_cmp_neq,
     [INT_BIT_LSH] = emit_bit_lsh,
     [INT_BIT_RSH] = emit_bit_rsh,
+    [INT_BIT_OR] = emit_bit_or,
+    [INT_BIT_XOR] = emit_bit_xor,
     [INT_ARTH_MUL] = emit_arth_mul,
 };
 

@@ -283,12 +283,6 @@ static void emit_binary_expr(CodegenState *state, BinaryExpr *expr) {
         case TOKEN_AMP:
             emit_binary_and_expr(state, expr, temp);
             break;
-        case TOKEN_PIPE:
-            emit_binary_or_expr(state, expr, temp);
-            break;
-        case TOKEN_CARET:
-            emit_binary_xor_expr(state, expr, temp);
-            break;
         case TOKEN_LESS:
         case TOKEN_LESS_EQUAL:
         case TOKEN_GREATER:
@@ -300,6 +294,8 @@ static void emit_binary_expr(CodegenState *state, BinaryExpr *expr) {
         case TOKEN_LESS_LESS:
         case TOKEN_GREATER_GREATER:
         case TOKEN_STAR:
+        case TOKEN_CARET:
+        case TOKEN_PIPE:
             emit_binary_arg_intr_expr(state, expr, temp);
             break;
         default:
@@ -367,63 +363,6 @@ static void emit_binary_or_expr(CodegenState *state, BinaryExpr *expr, const cha
     pop_temporary(state);
 }
 
-static void emit_binary_xor_expr(CodegenState *state, BinaryExpr *expr, const char *temp) {
-    const char *t1 = get_next_temporary(state);
-    const char *t2 = get_next_temporary(state);
-
-    // Preserve B
-    emit(state, (ManoInst) {
-        .type = INST_MEM_STA,
-        .argument = t1,
-    });
-
-    // Compute ~(A & ~B)
-    emit(state, (ManoInst) {
-        .type = INST_REG_CMA,
-    });
-    emit(state, (ManoInst) {
-        .type = INST_MEM_AND,
-        .argument = temp,
-    });
-    emit(state, (ManoInst) {
-        .type = INST_REG_CMA,
-    });
-    emit(state, (ManoInst) {
-        .type = INST_MEM_STA,
-        .argument = t2,
-    });
-    
-    // Compute ~(~A & B)
-    emit(state, (ManoInst) {
-        .type = INST_MEM_LDA,
-        .argument = temp,
-    });
-    emit(state, (ManoInst) {
-        .type = INST_REG_CMA,
-    });
-    emit(state, (ManoInst) {
-        .type = INST_MEM_AND,
-        .argument = t1,
-    });
-    emit(state, (ManoInst) {
-        .type = INST_REG_CMA,
-    });
-    
-    // Compute ~(A & ~B) & ~(~A & B)
-    emit(state, (ManoInst) {
-        .type = INST_MEM_AND,
-        .argument = t2,
-    });
-
-    // Compute ~(~(A & ~B) & ~(~A & B)) = A ^ B
-    emit(state, (ManoInst) {
-        .type = INST_REG_CMA,
-    });
-    
-    pop_temporary(state);
-    pop_temporary(state);
-}
-
 static void emit_binary_comp_expr(CodegenState *state, BinaryExpr *expr, const char *temp) {
     emit(state, (ManoInst) {
         .type = INST_REG_CMA,
@@ -478,6 +417,12 @@ static void emit_binary_arg_intr_expr(CodegenState *state, BinaryExpr *expr, con
             break;
         case TOKEN_STAR:
             intr = INT_ARTH_MUL;
+            break;
+        case TOKEN_PIPE:
+            intr = INT_BIT_OR;
+            break;
+        case TOKEN_CARET:
+            intr = INT_BIT_XOR;
             break;
         default:
             assert(0 && "Unreachable code");
