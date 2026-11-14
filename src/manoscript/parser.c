@@ -27,10 +27,12 @@ static Expr parse_term(ParserState *state);
 static Expr parse_factor(ParserState *state);
 static Expr parse_unary(ParserState *state);
 static Expr parse_primary(ParserState *state);
+static Expr parse_identifier_or_call(ParserState *state, bool is_builtin);
 
 static Token *advance(ParserState *state);
 static Token *peek(ParserState *state);
 static Token* peek_next(ParserState *state);
+static Token* peek_next_next(ParserState *state);
 static bool check(ParserState *state, TokenType type);
 static bool match(ParserState *state, TokenType type);
 static bool is_at_end(ParserState *state);
@@ -40,28 +42,42 @@ static Token *consume(ParserState *state, TokenType type);
 
 static void error(ParserState *state, int line, const char *format, ...);
 
-ParserState parser_new(char *src, Vector tokens) {
+ParserState parser_new() {
     return (ParserState) {
-        .src = src,
         .current = 0,
-        .tokens = tokens,
         .had_error = false,
         .arena = arena_new(),
+        .statements = vector_new(sizeof(Stmt))
     };
 }
 
 
-Program parse_program(ParserState *state) {
-    Vector vec = vector_new(sizeof(Stmt));
-    
+Program parse_program(ParserState *state, const char *src, Vector tokens) {
+    state->src = src;
+    state->tokens = tokens;
+    state->current = 0;
+
     while (!is_at_end(state)) {
         Stmt stmt = parse_decl(state);
 
-        vector_push(&vec, &stmt);
+        vector_push(&state->statements, &stmt);
     }
 
     return (Program) {
-        .statements = vec,
+        .statements = state->statements,
+    };
+}
+
+Program parse_program_builtin(ParserState *state, const char *src, Vector tokens) {
+    Stmt begin = (Stmt) { .type = STMT_PSEUDO_EN_BUILTIN };
+    Stmt end = (Stmt) { .type = STMT_PSEUDO_DIS_BUILTIN };
+    
+    vector_push(&state->statements, &begin);
+    parse_program(state, src, tokens);
+    vector_push(&state->statements, &end);
+
+    return (Program) {
+        .statements = state->statements,
     };
 }
 
@@ -243,7 +259,18 @@ static Expr parse_expr(ParserState *state) {
 }
 
 static Expr parse_assignment(ParserState *state) {
-    if (peek(state)->type == TOKEN_IDENTIFIER && peek_next(state) != nullptr && peek_next(state)->type == TOKEN_EQUAL) {
+    bool is_builtin_assign = check(state, TOKEN_AT) && 
+        peek_next(state) != nullptr && peek_next(state)->type == TOKEN_IDENTIFIER && 
+        peek_next_next(state) != nullptr && peek_next_next(state)->type == TOKEN_EQUAL;
+
+    bool is_normal_assign = check(state, TOKEN_IDENTIFIER) && 
+        peek_next(state) != nullptr && peek_next(state)->type == TOKEN_EQUAL;
+
+    if (is_builtin_assign || is_normal_assign) {
+        if (is_builtin_assign) {
+            advance(state);
+        }
+
         Token *id = peek(state);
 
         advance(state);
@@ -256,6 +283,7 @@ static Expr parse_assignment(ParserState *state) {
             .assignment = {
                 .id = id,
                 .value = arena_alloc_type(&state->arena, sizeof(expr), &expr),
+                .builtin = is_builtin_assign,
             }
         };
     }
@@ -399,33 +427,10 @@ static Expr parse_primary(ParserState *state) {
             }
         };
     } else if (match(state, TOKEN_IDENTIFIER)) {
-        Token *id = previous(state);
-
-        if (!match(state, TOKEN_LEFT_PAREN)) return (Expr) {
-            .type = EXPR_IDENTIFIER,
-            .identifier = {
-                .id = id,
-            }
-        };
-
-        Vector arguments = vector_new(sizeof(Expr));
-
-        while (!is_at_end(state) && !match(state, TOKEN_RIGHT_PAREN)) {
-            Expr expr = parse_expr(state);
-            vector_push(&arguments, &expr);
-
-            if (peek(state)->type != TOKEN_RIGHT_PAREN) {
-                consume(state, TOKEN_COMMA);
-            }
-        }
-
-        return (Expr) {
-            .type = EXPR_CALL,
-            .call = {
-                .callee = id,
-                .arguments = arguments,
-            }
-        };
+        return parse_identifier_or_call(state, false);
+    } else if (match(state, TOKEN_AT)) {
+        consume(state, TOKEN_IDENTIFIER);
+        return parse_identifier_or_call(state, true);
     } else if (match(state, TOKEN_NUMBER)) {
         return (Expr) {
             .type = EXPR_LITERAL,
@@ -441,6 +446,38 @@ static Expr parse_primary(ParserState *state) {
     }
 }
 
+static Expr parse_identifier_or_call(ParserState *state, bool is_builtin) {
+    Token *id = previous(state);
+
+    if (!match(state, TOKEN_LEFT_PAREN)) return (Expr) {
+        .type = EXPR_IDENTIFIER,
+        .identifier = {
+            .id = id,
+            .builtin = is_builtin,
+        }
+    };
+
+    Vector arguments = vector_new(sizeof(Expr));
+
+    while (!is_at_end(state) && !match(state, TOKEN_RIGHT_PAREN)) {
+        Expr expr = parse_expr(state);
+        vector_push(&arguments, &expr);
+
+        if (peek(state)->type != TOKEN_RIGHT_PAREN) {
+            consume(state, TOKEN_COMMA);
+        }
+    }
+
+    return (Expr) {
+        .type = EXPR_CALL,
+        .call = {
+            .callee = id,
+            .arguments = arguments,
+            .builtin = is_builtin,
+        }
+    };
+}
+
 static Token *advance(ParserState *state) {
     return vector_at(&state->tokens, state->current++);
 }
@@ -452,6 +489,11 @@ static Token* peek(ParserState *state) {
 static Token* peek_next(ParserState *state) {
     if (state->current + 1 >= state->tokens.size) return nullptr;
     return (Token *) vector_at(&state->tokens, state->current + 1);
+}
+
+static Token* peek_next_next(ParserState *state) {
+    if (state->current + 2 >= state->tokens.size) return nullptr;
+    return (Token *) vector_at(&state->tokens, state->current + 2);
 }
 
 static bool check(ParserState *state, TokenType type) {

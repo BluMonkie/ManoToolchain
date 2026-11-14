@@ -33,11 +33,13 @@ typedef struct {
 
 typedef struct {
     Token *id;
+    bool builtin;
 } IdentifierExpr;
 
 typedef struct {
     Token *id;
     Expr *value;
+    bool builtin;
 } AssignmentExpr;
 
 typedef enum {
@@ -54,6 +56,7 @@ typedef struct {
 typedef struct {
     Token *callee;
     Vector arguments;
+    bool builtin;
 } CallExpr;
 
 struct Expr {
@@ -79,6 +82,8 @@ typedef enum {
     STMT_IF,
     STMT_WHILE,
     STMT_ASM,
+    STMT_PSEUDO_EN_BUILTIN,
+    STMT_PSEUDO_DIS_BUILTIN,
 } StmtType;
 
 typedef struct {
@@ -121,6 +126,7 @@ typedef struct {
     Vector parameters;
     FunParameter *output;
     BlockStmt *body;
+    bool is_builtin;
 } FunDeclStmt;
 
 struct Stmt {

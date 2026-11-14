@@ -5,12 +5,14 @@
 #include "common/arena.h"
 
 typedef struct {
-    char *src;
+    const char *src;
     bool had_error;
     size_t current;
     Vector tokens;
     Arena arena;
+    Vector statements;
 } ParserState;
 
-ParserState parser_new(char *src, Vector tokens);
-Program parse_program(ParserState *state);
+ParserState parser_new();
+Program parse_program(ParserState *state, const char *src, Vector tokens);
+Program parse_program_builtin(ParserState *state, const char *src, Vector tokens);

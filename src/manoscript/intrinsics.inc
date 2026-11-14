@@ -655,7 +655,6 @@ static void emit_arth_div(CodegenState *state, const char *label) {
     const char *loop_l = symbol_get_label(&state->symbols);
     const char *sub_l = symbol_get_label(&state->symbols);
     const char *sub_end_l = symbol_get_label(&state->symbols);
-    const char *arg_neg_l = symbol_get_label(&state->symbols);
     const char *arg_neg_end_l = symbol_get_label(&state->symbols);
     const char *div_not_neg_l = symbol_get_label(&state->symbols);
     const char *div_neg_end_l = symbol_get_label(&state->symbols);

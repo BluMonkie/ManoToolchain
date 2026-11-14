@@ -15,6 +15,7 @@ typedef struct {
     IntrinsicEntry intrinsics[INT_COUNT];
     int temp_depth;
     const char *pending_label;
+    bool is_builtin;
 } CodegenState;
 
 CodegenState codegen_new(Program *program);

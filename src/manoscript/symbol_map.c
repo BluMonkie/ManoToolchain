@@ -43,8 +43,8 @@ void symbol_map_free(SymbolMap *map) {
     arena_drop(&map->arena);
 }
 
-bool symbol_define_symbol(SymbolMap *map, StringSlice str) {
-    if (symbol_exists_in_scope(map, str)) return false;
+bool symbol_define_symbol(SymbolMap *map, StringSlice str, bool is_builtin) {
+    if (symbol_get_map_symbol_in_scope(map, str, is_builtin)) return false;
 
     char *mangled = arena_alloc(&map->arena, sizeof(char) * 4);
     next_var_sym(map, mangled);
@@ -53,6 +53,7 @@ bool symbol_define_symbol(SymbolMap *map, StringSlice str) {
         .sym_name = str,
         .mangled = mangled,
         .type = SYMBOL_VAR,
+        .is_builtin = is_builtin,
     };
 
     vector_push(&map->symbol_map, &pair);
@@ -67,10 +68,12 @@ bool symbol_define_symbol(SymbolMap *map, StringSlice str) {
     return true;
 }
 
-bool symbol_define_function(SymbolMap *map, FunDeclStmt *fun) {
-    if (symbol_exists(map, fun->identifier->lexeme)) {
+bool symbol_define_function(SymbolMap *map, FunDeclStmt *fun, bool is_builtin) {
+    if (symbol_exists(map, fun->identifier->lexeme, is_builtin)) {
         return false;
     }
+
+    fun->is_builtin = is_builtin;
 
     char *mangled = arena_alloc(&map->arena, sizeof(char) * 4);
     next_fun_label_sym(map, mangled);
@@ -79,6 +82,7 @@ bool symbol_define_function(SymbolMap *map, FunDeclStmt *fun) {
         .sym_name = fun->identifier->lexeme,
         .mangled = mangled,
         .type = SYMBOL_FUN,
+        .is_builtin = is_builtin,
     };
     vector_push(&map->symbol_map, &pair);
 
@@ -92,13 +96,13 @@ bool symbol_define_function(SymbolMap *map, FunDeclStmt *fun) {
     symbol_push_scope(map);
     for (size_t i = 0; i < fun->parameters.size; i++) {
         FunParameter *param = vector_at(&fun->parameters, i);
-        symbol_define_symbol(map, param->identifier->lexeme);
-        param->mangled = symbol_get_map_symbol(map, param->identifier->lexeme);
+        symbol_define_symbol(map, param->identifier->lexeme, false);
+        param->mangled = symbol_get_map_symbol(map, param->identifier->lexeme, false);
     }
     if (fun->output != nullptr) {
         FunParameter *param = fun->output;
-        symbol_define_symbol(map, param->identifier->lexeme);
-        param->mangled = symbol_get_map_symbol(map, param->identifier->lexeme);
+        symbol_define_symbol(map, param->identifier->lexeme, false);
+        param->mangled = symbol_get_map_symbol(map, param->identifier->lexeme, false);
     }
     FunScopePair fsp = {
         .fun = fun,
@@ -111,36 +115,30 @@ bool symbol_define_function(SymbolMap *map, FunDeclStmt *fun) {
     return true;
 }
 
-bool symbol_exists(SymbolMap *map, StringSlice str) {
-    return symbol_get_map_symbol(map, str) != nullptr;
+bool symbol_exists(SymbolMap *map, StringSlice str, bool is_builtin) {
+    return symbol_get_map_symbol(map, str, is_builtin) != nullptr;
 }
 
-bool symbol_exists_in_scope(SymbolMap *map, StringSlice str) {
-    Scope *scope = map->scope;
-
+static SymbolPair *get_symbol_in_scope(SymbolMap *map, StringSlice str, Scope *scope, bool is_builtin) {
     for (size_t i = 0; i < scope->symbols.size; i++) {
         SymbolIndexPair *vid = vector_at(&scope->symbols, i);
         StringSlice *name = &vid->sym_name;
+        SymbolPair *sym = vector_at(&map->symbol_map, vid->index);
 
-        if (str.len == name->len && memcmp(str.start, name->start, str.len) == 0) {
-            return true;
+        if (sym->is_builtin == is_builtin && str.len == name->len && memcmp(str.start, name->start, str.len) == 0) {
+            return sym;
         }
     }
 
-    return false;
+    return nullptr;
 }
-
-const char *symbol_get_map_symbol(SymbolMap *map, StringSlice str) {
+static SymbolPair *get_symbol(SymbolMap *map, StringSlice str, bool is_builtin) {
     Scope *scope = map->scope;
 
     while (scope != nullptr) {
-        for (size_t i = 0; i < scope->symbols.size; i++) {
-            SymbolIndexPair *vid = vector_at(&scope->symbols, i);
-            StringSlice *name = &vid->sym_name;
-
-            if (str.len == name->len && memcmp(str.start, name->start, str.len) == 0) {
-                return ((SymbolPair *) vector_at(&map->symbol_map, vid->index))->mangled;
-            }
+        SymbolPair *sym = get_symbol_in_scope(map, str, scope, is_builtin);
+        if (sym != nullptr) {
+            return sym;
         }
         scope = scope->parent;
     }
@@ -148,12 +146,29 @@ const char *symbol_get_map_symbol(SymbolMap *map, StringSlice str) {
     return nullptr;
 }
 
-FunDeclStmt *symbol_get_function(SymbolMap *map, StringSlice str) {
+const char *symbol_get_map_symbol_in_scope(SymbolMap *map, StringSlice str, bool is_builtin) {
+    Scope *scope = map->scope;
+    SymbolPair *sym = get_symbol_in_scope(map, str, scope, is_builtin);
+    if (sym == nullptr) {
+        return nullptr;
+    }
+    return sym->mangled;
+}
+
+const char *symbol_get_map_symbol(SymbolMap *map, StringSlice str, bool is_builtin) {
+    SymbolPair *sym = get_symbol(map, str, is_builtin);
+    if (sym == nullptr) {
+        return nullptr;
+    }
+    return sym->mangled;
+}
+
+FunDeclStmt *symbol_get_function(SymbolMap *map, StringSlice str, bool is_builtin) {
     for (size_t i = 0; i < map->functions.size; i++) {
         FunDeclStmt *fun = vector_at(&map->functions, i);
         StringSlice *name = &fun->identifier->lexeme;
 
-        if (str.len == name->len && memcmp(str.start, name->start, str.len) == 0) {
+        if (fun->is_builtin == is_builtin && str.len == name->len && memcmp(str.start, name->start, str.len) == 0) {
             return fun;
         }
     }

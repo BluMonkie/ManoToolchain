@@ -17,6 +17,7 @@ typedef struct {
     StringSlice sym_name;
     char *mangled;
     SymbolType type;
+    bool is_builtin;
 } SymbolPair;
 
 typedef struct {
@@ -59,13 +60,13 @@ typedef struct {
 SymbolMap symbol_map_new();
 void symbol_map_free(SymbolMap* map);
 
-bool symbol_define_symbol(SymbolMap *map, StringSlice str);
-bool symbol_define_function(SymbolMap *map, FunDeclStmt *fun);
-bool symbol_exists(SymbolMap *map, StringSlice str);
-bool symbol_exists_in_scope(SymbolMap *map, StringSlice str);
-const char *symbol_get_map_symbol(SymbolMap *map, StringSlice str);
+bool symbol_define_symbol(SymbolMap *map, StringSlice str, bool is_builtin);
+bool symbol_define_function(SymbolMap *map, FunDeclStmt *fun, bool is_builtin);
+bool symbol_exists(SymbolMap *map, StringSlice str, bool is_builtin);
+const char *symbol_get_map_symbol_in_scope(SymbolMap *map, StringSlice str, bool is_builtin);
+const char *symbol_get_map_symbol(SymbolMap *map, StringSlice str, bool is_builtin);
 const char *symbol_get_map_const(SymbolMap *map, int num);
-FunDeclStmt *symbol_get_function(SymbolMap *map, StringSlice str);
+FunDeclStmt *symbol_get_function(SymbolMap *map, StringSlice str, bool is_builtin);
 const char *symbol_get_label(SymbolMap *map);
 const char *symbol_get_label_for_block(SymbolMap *map, Stmt *stmt, const char *return_label);
 

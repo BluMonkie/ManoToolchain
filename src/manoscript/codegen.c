@@ -27,8 +27,6 @@ static void emit_binary_expr(CodegenState *state, BinaryExpr *expr);
 static void emit_binary_add_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
 static void emit_binary_sub_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
 static void emit_binary_and_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
-static void emit_binary_or_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
-static void emit_binary_xor_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
 static void emit_binary_comp_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
 static void emit_binary_arg_intr_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
 static void emit_unary_expr(CodegenState *state, UnaryExpr *expr);
@@ -77,6 +75,14 @@ void emit_instructions(CodegenState *state) {
 
     for (size_t i = 0; i < state->program->statements.size; i++) {
         Stmt *stmt = vector_at(&state->program->statements, i);
+        if (stmt->type == STMT_PSEUDO_EN_BUILTIN) {
+            state->is_builtin = true;
+            continue;
+        }
+        if (stmt->type == STMT_PSEUDO_DIS_BUILTIN) {
+            state->is_builtin = false;
+            continue;
+        }
         emit_stmt_inst(state, stmt);
     }
 
@@ -113,24 +119,26 @@ static void emit_stmt_inst(CodegenState *state, Stmt *stmt) {
         case STMT_WHILE:
             emit_while_inst(state, &stmt->while_stmt);
             break;
+        default:
+            assert(0 && "Unreachable code");
     }
 }
 
 static void emit_var_decl_inst(CodegenState *state, VarDeclStmt *stmt) {
     // TODO: Add check for if var is predefined
-    symbol_define_symbol(&state->symbols, stmt->identifier->lexeme);
+    symbol_define_symbol(&state->symbols, stmt->identifier->lexeme, state->is_builtin);
     if (stmt->initializer != nullptr) {
         emit_expr_inst(state, stmt->initializer);
         emit(state, (ManoInst) {
             .type = INST_MEM_STA,
-            .argument = symbol_get_map_symbol(&state->symbols, stmt->identifier->lexeme),
+            .argument = symbol_get_map_symbol(&state->symbols, stmt->identifier->lexeme, state->is_builtin),
         });
     }
 }
 
 static void emit_fun_decl_inst(CodegenState *state, FunDeclStmt *stmt) {
     // TODO: Check if symbol is available
-    symbol_define_function(&state->symbols, stmt);
+    symbol_define_function(&state->symbols, stmt, state->is_builtin);
 }
 
 static void emit_block_inst(CodegenState *state, BlockStmt *stmt) {
@@ -196,7 +204,7 @@ static void emit_asm_inst(CodegenState *state, AsmStmt *stmt) {
             const char *substitute = symbol_get_map_symbol(&state->symbols, (StringSlice) {
                 .start = begin,
                 .len = c - begin,
-            });
+            }, false);
 
             for (int i = 0; i < 3; i++) {
                 vector_push(&sb, &substitute[i]);
@@ -257,7 +265,7 @@ static void emit_assignment_expr(CodegenState *state, AssignmentExpr *expr) {
     emit_expr_inst(state, expr->value);
     emit(state, (ManoInst) {
         .type = INST_MEM_STA,
-        .argument = symbol_get_map_symbol(&state->symbols, expr->id->lexeme),
+        .argument = symbol_get_map_symbol(&state->symbols, expr->id->lexeme, expr->builtin),
     });
 }
 
@@ -332,36 +340,6 @@ static void emit_binary_and_expr(CodegenState *state, BinaryExpr *expr, const ch
         .type = INST_MEM_AND,
         .argument = temp,
     });
-}
-
-static void emit_binary_or_expr(CodegenState *state, BinaryExpr *expr, const char *temp) {
-    emit(state, (ManoInst) {
-        .type = INST_REG_CMA,
-    });
-    
-    const char *t1 = get_next_temporary(state);
-    emit(state, (ManoInst) {
-        .type = INST_MEM_STA,
-        .argument = t1,
-    });
-    
-    emit(state, (ManoInst) {
-        .type = INST_MEM_LDA,
-        .argument = temp,
-    });
-    emit(state, (ManoInst) {
-        .type = INST_REG_CMA,
-    });
-    
-    emit(state, (ManoInst) {
-        .type = INST_MEM_AND,
-        .argument = t1,
-    });
-    emit(state, (ManoInst) {
-        .type = INST_REG_CMA,
-    });
-
-    pop_temporary(state);
 }
 
 static void emit_binary_comp_expr(CodegenState *state, BinaryExpr *expr, const char *temp) {
@@ -483,7 +461,7 @@ static void emit_unary_expr(CodegenState *state, UnaryExpr *expr) {
 }
 
 static void emit_identifier_expr(CodegenState *state, IdentifierExpr *expr) {
-    const char *label = symbol_get_map_symbol(&state->symbols, expr->id->lexeme);
+    const char *label = symbol_get_map_symbol(&state->symbols, expr->id->lexeme, expr->builtin);
     emit(state, (ManoInst) {
         .type = INST_MEM_LDA,
         .argument = label,
@@ -500,7 +478,7 @@ static void emit_literal_expr(CodegenState *state, LiteralExpr *expr) {
 
 static void emit_call_expr(CodegenState *state, CallExpr *expr) {
     // TODO: Verify the function actually exists and parameter count
-    FunDeclStmt *fun = symbol_get_function(&state->symbols, expr->callee->lexeme);
+    FunDeclStmt *fun = symbol_get_function(&state->symbols, expr->callee->lexeme, expr->builtin);
     assert(expr->arguments.size == fun->parameters.size);
 
     for (size_t i = 0; i < expr->arguments.size; i++) {
@@ -528,7 +506,7 @@ static void emit_call_expr(CodegenState *state, CallExpr *expr) {
 
     emit(state, (ManoInst) {
         .type = INST_MEM_BSA,
-        .argument = symbol_get_map_symbol(&state->symbols, fun->identifier->lexeme),
+        .argument = symbol_get_map_symbol(&state->symbols, fun->identifier->lexeme, expr->builtin),
     });
 }
 
@@ -593,7 +571,7 @@ static void emit_branches_section(CodegenState *state) {
 static void emit_function_section(CodegenState *state) {
     for (size_t i = 0; i < state->symbols.functions.size; i++) {
         FunDeclStmt *fun = vector_at(&state->symbols.functions, i);
-        const char *label = symbol_get_map_symbol(&state->symbols, fun->identifier->lexeme);
+        const char *label = symbol_get_map_symbol(&state->symbols, fun->identifier->lexeme, fun->is_builtin);
         restore_fun_scope(&state->symbols, fun);
 
         emit(state, (ManoInst) {

@@ -14,6 +14,10 @@
 #define MS_TOKENS_FILE_EXTENSION "_tokens.txt"
 #define MS_AST_FILE_EXTENSION "_ast.txt"
 
+const char BUILTIN_SRC[] = {
+    #embed "builtins.ms" suffix(, '\0') if_empty('\0')
+};
+
 void print_help() {
     printf("ManoScript - A programming language targeting mano basic computer\n");
     printf("Usage: manoscript [options] input_file.ms\n");
@@ -54,10 +58,13 @@ int main(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
 
-    LexerState lexer = lexer_new(src);
-    scan_tokens(&lexer);
+    LexerState lexer_builtin = lexer_new(BUILTIN_SRC);
+    scan_tokens(&lexer_builtin);
 
-    if (lexer.had_error) {
+    LexerState lexer_prog = lexer_new(src);
+    scan_tokens(&lexer_prog);
+
+    if (lexer_builtin.had_error || lexer_prog.had_error) {
         exit(EXIT_FAILURE);
     }
     
@@ -72,13 +79,14 @@ int main(int argc, char **argv) {
             fprintf(stderr, "ERROR: Can't write to file %s.\n", tokens_file_path);
             exit(EXIT_FAILURE);
         }
-        print_tokens(tokens_file, lexer.tokens);
+        print_tokens(tokens_file, lexer_prog.tokens);
         fclose(tokens_file);
         free(tokens_file_path);
     }
     
-    ParserState parser = parser_new(src, lexer.tokens);
-    Program prog = parse_program(&parser);
+    ParserState parser = parser_new();
+    parse_program_builtin(&parser, BUILTIN_SRC, lexer_builtin.tokens);
+    Program prog = parse_program(&parser, src, lexer_prog.tokens);
 
     if (parser.had_error) {
         exit(EXIT_FAILURE);
