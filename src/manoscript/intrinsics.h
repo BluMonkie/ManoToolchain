@@ -9,6 +9,7 @@ typedef enum {
     INT_CMP_NEQ,
     INT_BIT_LSH,
     INT_BIT_RSH,
+    INT_ARTH_MUL,
     INT_COUNT,
 } Intrinsic;
 

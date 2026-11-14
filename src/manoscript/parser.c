@@ -24,6 +24,7 @@ static Expr parse_comparison(ParserState *state);
 static Expr parse_bitwise_expr(ParserState *state);
 static Expr parse_shift_expr(ParserState *state);
 static Expr parse_term(ParserState *state);
+static Expr parse_factor(ParserState *state);
 static Expr parse_unary(ParserState *state);
 static Expr parse_primary(ParserState *state);
 
@@ -326,9 +327,30 @@ static Expr parse_shift_expr(ParserState *state) {
 }
 
 static Expr parse_term(ParserState *state) {
-    Expr expr = parse_unary(state);
+    Expr expr = parse_factor(state);
 
     while (match(state, TOKEN_PLUS) || match(state, TOKEN_MINUS)) {
+        Token *tok = previous(state);
+        
+        Expr right = parse_factor(state);
+
+        expr = (Expr) {
+            .type = EXPR_BINARY,
+            .binary = {
+                .left = arena_alloc_type(&state->arena, sizeof(expr), &expr),
+                .op = tok,
+                .right = arena_alloc_type(&state->arena, sizeof(right), &right),
+            }
+        };
+    }
+    
+    return expr;
+}
+
+static Expr parse_factor(ParserState *state) {
+    Expr expr = parse_unary(state);
+
+    while (match(state, TOKEN_STAR) || match(state, TOKEN_SLASH)) {
         Token *tok = previous(state);
         
         Expr right = parse_unary(state);

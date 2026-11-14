@@ -30,7 +30,7 @@ static void emit_binary_and_expr(CodegenState *state, BinaryExpr *expr, const ch
 static void emit_binary_or_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
 static void emit_binary_xor_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
 static void emit_binary_comp_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
-static void emit_binary_shift_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
+static void emit_binary_arg_intr_expr(CodegenState *state, BinaryExpr *expr, const char *temp);
 static void emit_unary_expr(CodegenState *state, UnaryExpr *expr);
 static void emit_identifier_expr(CodegenState *state, IdentifierExpr *expr);
 static void emit_literal_expr(CodegenState *state, LiteralExpr *expr);
@@ -299,7 +299,8 @@ static void emit_binary_expr(CodegenState *state, BinaryExpr *expr) {
             break;
         case TOKEN_LESS_LESS:
         case TOKEN_GREATER_GREATER:
-            emit_binary_shift_expr(state, expr, temp);
+        case TOKEN_STAR:
+            emit_binary_arg_intr_expr(state, expr, temp);
             break;
         default:
             assert(0 && "unreachable code");
@@ -466,7 +467,7 @@ static void emit_binary_comp_expr(CodegenState *state, BinaryExpr *expr, const c
     });
 }
 
-static void emit_binary_shift_expr(CodegenState *state, BinaryExpr *expr, const char *temp) {
+static void emit_binary_arg_intr_expr(CodegenState *state, BinaryExpr *expr, const char *temp) {
     Intrinsic intr;
     switch (expr->op->type) {
         case TOKEN_LESS_LESS:
@@ -474,6 +475,9 @@ static void emit_binary_shift_expr(CodegenState *state, BinaryExpr *expr, const 
             break;
         case TOKEN_GREATER_GREATER:
             intr = INT_BIT_RSH;
+            break;
+        case TOKEN_STAR:
+            intr = INT_ARTH_MUL;
             break;
         default:
             assert(0 && "Unreachable code");

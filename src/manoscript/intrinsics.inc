@@ -392,6 +392,130 @@ static void emit_bit_rsh(CodegenState *state, const char *label) {
     });
 }
 
+void emit_arth_mul(CodegenState *state, const char *label) {
+    const char *count_c = symbol_get_map_const(&state->symbols, -16);
+    const char *arg = get_intrinsic_arg(state, INT_ARTH_MUL);
+    const char *prod_l = symbol_get_label(&state->symbols);
+    const char *mult_l = symbol_get_label(&state->symbols);
+    const char *count_l = symbol_get_label(&state->symbols);
+    const char *add_l = symbol_get_label(&state->symbols);
+    const char *add_end_l = symbol_get_label(&state->symbols);
+    const char *loop_l = symbol_get_label(&state->symbols);
+    
+    emit(state, (ManoInst) {
+        .type = INST_PSI_HEX,
+        .argument = "0",
+        .label = label,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = mult_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_LDA,
+        .argument = count_c,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = count_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_CLA,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = prod_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_LDA,
+        .argument = mult_l,
+        .label = loop_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_CIR,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = mult_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_SZE,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_BUN,
+        .argument = add_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_BUN,
+        .argument = add_end_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_LDA,
+        .argument = arg,
+        .label = add_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_ADD,
+        .argument = prod_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = prod_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_LDA,
+        .argument = arg,
+        .label = add_end_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_CLE,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_REG_CIL,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_STA,
+        .argument = arg,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_ISZ,
+        .argument = count_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_BUN,
+        .argument = loop_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_LDA,
+        .argument = prod_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_MEM_BUN,
+        .argument = label,
+        .indirect = true,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_PSI_HEX,
+        .argument = "0",
+        .label = arg,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_PSI_HEX,
+        .argument = "0",
+        .label = prod_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_PSI_HEX,
+        .argument = "0",
+        .label = mult_l,
+    });
+    emit(state, (ManoInst) {
+        .type = INST_PSI_HEX,
+        .argument = "0",
+        .label = count_l,
+    });
+}
+
 const IntrinsicEmitter emitters[] = {
     [INT_CMP_LS] = emit_cmp_ls,
     [INT_CMP_GR] = emit_cmp_gr,
@@ -401,6 +525,7 @@ const IntrinsicEmitter emitters[] = {
     [INT_CMP_NEQ] = emit_cmp_neq,
     [INT_BIT_LSH] = emit_bit_lsh,
     [INT_BIT_RSH] = emit_bit_rsh,
+    [INT_ARTH_MUL] = emit_arth_mul,
 };
 
 static void emit_intrinsics(CodegenState *state) {

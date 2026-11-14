@@ -16,6 +16,7 @@ assignment = ( IDENTIFIER , "=" , assignment ) | comparison ;
 comparison = bitwise , [ ( "<" | "<=" | ">" | ">=" | "==" | "!=" ) , bitwise ] ;
 bitwise = shift , { ( "|" | "&" | "^" ) , shift } ;
 shift = term , { ( "<<" | ">>" ) , term } ;
-term = unary , { ( "+" | "-" ) , unary } ;
+term = factor , { ( "+" | "-" ) , factor } ;
+factor = unary , { ( "+" | "-" ) , unary } ;
 unary = ( "+" | "-" | "~" ) , unary | primary;
 primary = "(" , expr , ")" | LITERAL | IDENTIFIER | IDENTIFIER , "(" , [ expr ] , { "," , expr } , ")";
